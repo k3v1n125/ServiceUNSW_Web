@@ -1,0 +1,29 @@
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  padding: 2rem;
+  text-align: left;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-content {
+    padding-top: 1rem;
+    overflow-y: visible;
+  }
+
+  .app-content h2:first-child {
+    margin-top: 0;
+  }
+}
