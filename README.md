@@ -39,15 +39,18 @@ This prints a local URL (usually `http://localhost:5173`) — open it in your br
 ```
 src/
   App.tsx              # Route definitions
-  components/          # Shared UI components (Sidebar, Calendar, ...)
-  pages/                # One file per route/page (Student, Staff, UserSettings)
+  components/          # Shared UI components (Sidebar, ...)
+  pages/                # Route pages (Home, Calendar, QuickLinks, UserSettings) and service data
 ```
 
 Routing is handled by [react-router-dom](https://reactrouter.com/). Add new pages under `src/pages/` and register them in [App.tsx](src/App.tsx).
+
+The workspace sidebar links to Home (`/home`), Calendar (`/calendar`), and
+Quick links (`/quick-links`). The root URL redirects to Home. The profile card
+opens `/settings`, and Help & support opens UNSW student support in a new tab.
 
 ## Resources
 
 - [React documentation](https://react.dev/)
 - [Vite documentation](https://vite.dev/)
 - [React Router documentation](https://reactrouter.com/)
-

@@ -6,6 +6,7 @@
 
 .app-content {
   flex: 1;
+  min-width: 0;
   padding: 2rem;
   text-align: left;
   overflow-y: auto;

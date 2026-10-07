@@ -1,7 +1,6 @@
 import { academicServices, personalServices } from './service'
 import type { ServiceEntry } from './service'
-import Calendar from '../components/Calendar'
-import './Student.css'
+import './QuickLinks.css'
 
 function ServiceGrid({ services }: { services: ServiceEntry[] }) {
   return (
@@ -25,13 +24,9 @@ function ServiceGrid({ services }: { services: ServiceEntry[] }) {
   )
 }
 
-function Student() {
+function QuickLinks() {
   return (
     <div>
-      <h2>Student Services</h2>
-
-      <Calendar />
-
       <h3>Academic</h3>
       <ServiceGrid services={academicServices} />
 
@@ -41,5 +36,4 @@ function Student() {
   )
 }
 
-export default Student
-
+export default QuickLinks

@@ -1,8 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
-import Staff from './pages/Staff'
-import Student from './pages/Student'
+import Calendar from './pages/Calendar'
+import Home from './pages/Home'
 import UserSettings from './pages/UserSettings'
+import QuickLinks from './pages/QuickLinks'
 import './App.css'
 
 function App() {
@@ -11,9 +12,10 @@ function App() {
       <Sidebar />
       <main className="app-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/student" replace />} />
-          <Route path="/student" element={<Student />} />
-          <Route path="/staff" element={<Staff />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/quick-links" element={<QuickLinks />} />
           <Route path="/settings" element={<UserSettings />} />
         </Routes>
       </main>
@@ -22,4 +24,3 @@ function App() {
 }
 
 export default App
-
