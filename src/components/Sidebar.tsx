@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import myunswLogo from '../assets/myunsw.png'
+import { getUserInitials } from '../data/users'
+import type { User } from '../data/users'
+import RoleBadges from './RoleBadges'
 import './Sidebar.css'
 
 function SidebarIcon({ children }: { children: ReactNode }) {
@@ -50,7 +53,7 @@ const navigation = [
   },
 ]
 
-function Sidebar() {
+function Sidebar({ user }: { user: User }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -90,21 +93,23 @@ function Sidebar() {
           <span>Help &amp; support</span>
         </a>
         <NavLink
-          to="/settings"
+          to="/profile"
           className={({ isActive }) =>
             `sidebar-user${isActive ? ' active' : ''}`
           }
         >
           <div className="sidebar-user-details">
-            <span className="sidebar-avatar" aria-hidden="true">K</span>
+            <span className="sidebar-avatar" aria-hidden="true">
+              {getUserInitials(user)}
+            </span>
             <div>
-              <span className="sidebar-user-name">Kevin</span>
+              <span className="sidebar-user-name">{user.fullName}</span>
               <span className="sidebar-profile-link">
                 View profile <span aria-hidden="true">&rarr;</span>
               </span>
             </div>
           </div>
-          <span className="sidebar-role">Student</span>
+          <RoleBadges roles={user.roles} />
         </NavLink>
       </div>
     </aside>

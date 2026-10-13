@@ -1,187 +1,99 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import type { ReactNode, SubmitEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { calendarCategoryLabels } from '../data/calendar'
+import type { CalendarCategory, CalendarEvent } from '../data/calendar'
+import { dateKey, getDayOccurrences } from '../calendar/events'
+import type { CalendarData } from '../calendar/useCalendarData'
+import { getEventDetailsPosition } from '../calendar/eventDetailsPosition'
 import './Calendar.css'
 
-interface CalendarEvent {
-  uid: string
-  summary: string
-  location?: string
-  start: Date
-  end?: Date
-  allDay: boolean
-  rrule?: string
-  exdates: Date[]
+function CalendarDialog({ title, onClose, children }: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    ref.current?.showModal()
+  }, [])
+  return (
+    <dialog ref={ref} className="calendar-modal" onCancel={onClose} onClose={onClose} aria-labelledby="calendar-dialog-title">
+      <button type="button" className="calendar-modal-close" aria-label="Close dialog" onClick={onClose}>×</button>
+      <h2 id="calendar-dialog-title">{title}</h2>
+      {children}
+    </dialog>
+  )
 }
 
-const STORAGE_KEY = 'calendar-ical-url'
-
-function unfoldLines(icsText: string): string[] {
-  const rawLines = icsText.split(/\r\n|\n|\r/)
-  const lines: string[] = []
-  for (const line of rawLines) {
-    if ((line.startsWith(' ') || line.startsWith('\t')) && lines.length > 0) {
-      lines[lines.length - 1] += line.slice(1)
-    } else {
-      lines.push(line)
-    }
-  }
-  return lines
+interface SelectedOccurrence {
+  event: CalendarEvent
+  occurrenceStart: Date
+  day: Date
+  anchor: HTMLButtonElement
 }
 
-function parseIcsDate(value: string): { date: Date; allDay: boolean } {
-  // Date-only, e.g. 20250101
-  if (/^\d{8}$/.test(value)) {
-    const year = Number(value.slice(0, 4))
-    const month = Number(value.slice(4, 6)) - 1
-    const day = Number(value.slice(6, 8))
-    return { date: new Date(year, month, day), allDay: true }
-  }
+function EventDetails({ selection, onClose }: { selection: SelectedOccurrence; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { event, occurrenceStart, day, anchor } = selection
 
-  // Date-time, e.g. 20250101T090000Z or 20250101T090000
-  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/.exec(value)
-  if (match) {
-    const [, year, month, day, hour, minute, second, utc] = match
-    if (utc) {
-      return {
-        date: new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second))),
-        allDay: false,
-      }
+  useLayoutEffect(() => {
+    const card = ref.current
+    if (!card) return
+    const position = getEventDetailsPosition(
+      day.getDay(), anchor.getBoundingClientRect(),
+      { width: window.innerWidth, height: window.innerHeight }, card.offsetHeight,
+    )
+    card.style.width = `${position.width}px`
+    card.style.left = `${position.left}px`
+    card.style.top = `${position.top}px`
+    card.dataset.side = position.side
+    card.querySelector<HTMLButtonElement>('button')?.focus()
+    return () => {
+      if (card.contains(document.activeElement) && anchor.isConnected) anchor.focus()
     }
-    return {
-      date: new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)),
-      allDay: false,
+  }, [selection, anchor, day])
+
+  useEffect(() => {
+    function outsideClick(event: PointerEvent) {
+      if (event.target instanceof Node && !ref.current?.contains(event.target) && !anchor.contains(event.target)) onClose()
     }
-  }
-
-  return { date: new Date(value), allDay: false }
-}
-
-function parseIcs(icsText: string): CalendarEvent[] {
-  const lines = unfoldLines(icsText)
-  const events: CalendarEvent[] = []
-  let current: Record<string, string> | null = null
-  let exdateValues: string[] = []
-
-  for (const line of lines) {
-    if (line === 'BEGIN:VEVENT') {
-      current = {}
-      exdateValues = []
-      continue
+    function escape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
     }
-    if (line === 'END:VEVENT') {
-      if (current && current.DTSTART) {
-        const { date: start, allDay } = parseIcsDate(current.DTSTART)
-        const exdates = exdateValues
-          .flatMap((value) => value.split(','))
-          .map((value) => parseIcsDate(value).date)
-        events.push({
-          uid: current.UID ?? `${current.SUMMARY ?? 'event'}-${current.DTSTART}`,
-          summary: current.SUMMARY ?? 'Untitled event',
-          location: current.LOCATION,
-          start,
-          end: current.DTEND ? parseIcsDate(current.DTEND).date : undefined,
-          allDay,
-          rrule: current.RRULE,
-          exdates,
-        })
-      }
-      current = null
-      continue
+    function scroll(event: Event) {
+      if (event.target instanceof Node && ref.current?.contains(event.target)) return
+      onClose()
     }
-    if (!current) continue
-
-    const separatorIndex = line.indexOf(':')
-    if (separatorIndex === -1) continue
-    const rawKey = line.slice(0, separatorIndex)
-    const value = line.slice(separatorIndex + 1)
-    const key = rawKey.split(';')[0]
-
-    if (key === 'EXDATE') {
-      exdateValues.push(value)
-    } else {
-      current[key] = value
+    document.addEventListener('pointerdown', outsideClick)
+    document.addEventListener('keydown', escape)
+    window.addEventListener('resize', onClose)
+    window.addEventListener('scroll', scroll, true)
+    return () => {
+      document.removeEventListener('pointerdown', outsideClick)
+      document.removeEventListener('keydown', escape)
+      window.removeEventListener('resize', onClose)
+      window.removeEventListener('scroll', scroll, true)
     }
-  }
+  }, [anchor, onClose])
 
-  return events
-}
-
-const RECURRENCE_DAY_INDEX: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 }
-
-// Expands an event's RRULE into concrete occurrence start dates within [rangeStart, rangeEnd].
-// Supports the common DAILY/WEEKLY/MONTHLY/YEARLY cases with INTERVAL, COUNT, UNTIL and BYDAY.
-function expandRecurrence(event: CalendarEvent, rangeStart: Date, rangeEnd: Date): Date[] {
-  if (!event.rrule) {
-    return event.start >= rangeStart && event.start <= rangeEnd ? [event.start] : []
-  }
-
-  const parts: Record<string, string> = {}
-  for (const part of event.rrule.split(';')) {
-    const [key, value] = part.split('=')
-    if (key && value) parts[key] = value
-  }
-
-  const freq = parts.FREQ
-  const interval = Number(parts.INTERVAL ?? '1') || 1
-  const count = parts.COUNT ? Number(parts.COUNT) : undefined
-  const until = parts.UNTIL ? parseIcsDate(parts.UNTIL).date : undefined
-  const exdateKeys = new Set(event.exdates.map((d) => dateKey(d)))
-
-  const occurrences: Date[] = []
-  let occurrenceCount = 0
-  const hardLimit = 1000
-  let iterations = 0
-
-  function accept(candidate: Date): boolean {
-    if (candidate < event.start) return false
-    if (until && candidate > until) return false
-    occurrenceCount++
-    if (count && occurrenceCount > count) return false
-    if (candidate >= rangeStart && candidate <= rangeEnd && !exdateKeys.has(dateKey(candidate))) {
-      occurrences.push(candidate)
-    }
-    return true
-  }
-
-  if (freq === 'WEEKLY') {
-    const byDay = parts.BYDAY?.split(',').map((d) => RECURRENCE_DAY_INDEX[d.slice(-2)]).filter((n) => n !== undefined)
-    const targetDays = byDay && byDay.length > 0 ? [...byDay].sort((a, b) => a - b) : [event.start.getDay()]
-    const weekStart = new Date(event.start)
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-
-    while (iterations < hardLimit) {
-      iterations++
-      let keepGoing = true
-      for (const dayNum of targetDays) {
-        const candidate = new Date(weekStart)
-        candidate.setDate(candidate.getDate() + dayNum)
-        candidate.setHours(event.start.getHours(), event.start.getMinutes(), event.start.getSeconds(), 0)
-        if (candidate < event.start) continue
-        keepGoing = accept(candidate)
-        if (!keepGoing) break
-      }
-      if (!keepGoing) break
-      if (weekStart > rangeEnd && !count) break
-      weekStart.setDate(weekStart.getDate() + 7 * interval)
-    }
-  } else if (freq === 'DAILY' || freq === 'MONTHLY' || freq === 'YEARLY') {
-    const cursor = new Date(event.start)
-    while (iterations < hardLimit) {
-      iterations++
-      if (cursor > rangeEnd && !count) break
-      if (!accept(new Date(cursor))) break
-      if (freq === 'DAILY') cursor.setDate(cursor.getDate() + interval)
-      else if (freq === 'MONTHLY') cursor.setMonth(cursor.getMonth() + interval)
-      else cursor.setFullYear(cursor.getFullYear() + interval)
-    }
-  } else {
-    return event.start >= rangeStart && event.start <= rangeEnd ? [event.start] : []
-  }
-
-  return occurrences
-}
-
-function dateKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+  return createPortal(
+    <div ref={ref} id="calendar-event-details" className="calendar-event-details" role="dialog"
+      aria-modal="false" aria-labelledby="calendar-event-title">
+      <button type="button" className="calendar-modal-close" aria-label="Close event details" onClick={onClose}>×</button>
+      <div className="calendar-event-details-heading">
+        <span className="calendar-event-color" style={{ background: getCourseColor(event).color }} aria-hidden="true" />
+        <h2 id="calendar-event-title">{event.summary}</h2>
+      </div>
+      <p>{formatEventTimeRange(occurrenceStart, event)}</p>
+      {event.rrule && <p className="calendar-status">Recurring event</p>}
+      {event.location && <p className="calendar-event-location">Location · {event.location}</p>}
+      <p className="calendar-status">{calendarCategoryLabels[event.category]}</p>
+      {event.demo && <p className="calendar-status">Demo event · Illustrative only</p>}
+    </div>,
+    document.body,
+  )
 }
 
 function formatEventTime(start: Date, allDay: boolean): string {
@@ -211,7 +123,7 @@ function formatEventTimeRange(occurrenceStart: Date, event: CalendarEvent): stri
 function getMonthGridStart(year: number, month: number): Date {
   const firstOfMonth = new Date(year, month, 1)
   const start = new Date(firstOfMonth)
-  start.setDate(start.getDate() - firstOfMonth.getDay())
+  start.setDate(start.getDate() - (firstOfMonth.getDay() + 6) % 7)
   return start
 }
 
@@ -242,66 +154,45 @@ function hashString(value: string): number {
   return Math.abs(hash)
 }
 
-function getCourseColor(summary: string) {
-  const index = hashString(extractCourseCode(summary)) % COURSE_COLOR_PALETTE.length
+function getCourseColor(event: CalendarEvent) {
+  if (event.category === 'deadline') return { background: '#eee8f8', color: '#70449a' }
+  if (event.category === 'campus') return { background: '#e4f2eb', color: '#28775e' }
+  const index = hashString(extractCourseCode(event.summary)) % COURSE_COLOR_PALETTE.length
   return COURSE_COLOR_PALETTE[index]
 }
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const FILTER_CATEGORIES: CalendarCategory[] = ['timetable', 'deadline', 'campus']
 
-function Calendar() {
-  const [icsUrl, setIcsUrl] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '')
+function Calendar({ calendar }: { calendar: CalendarData }) {
+  const { today, events, icsUrl, loading, error, saveIcsUrl, addPersonalEvent } = calendar
   const [inputValue, setInputValue] = useState(icsUrl)
-  const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Record<CalendarCategory, boolean>>({
+    timetable: true, deadline: true, campus: true, personal: true,
+  })
+  const [selectedDay, setSelectedDay] = useState(today)
+  const [dialog, setDialog] = useState<'settings' | 'add' | null>(null)
+  const [formError, setFormError] = useState('')
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
-  const [selectedOccurrence, setSelectedOccurrence] = useState<{ event: CalendarEvent; occurrenceStart: Date } | null>(
+  const [selectedOccurrence, setSelectedOccurrence] = useState<SelectedOccurrence | null>(
     null,
   )
 
-  useEffect(() => {
-    if (!icsUrl) {
-      setEvents([])
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-
-    const fetchUrl = `/api/ics-proxy?url=${encodeURIComponent(icsUrl)}`
-
-    fetch(fetchUrl)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Failed to load calendar (${response.status})`)
-        return response.text()
-      })
-      .then((text) => {
-        if (cancelled) return
-        setEvents(parseIcs(text))
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        const message = err instanceof Error ? err.message : 'Failed to load calendar'
-        setError(message)
-        setEvents([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [icsUrl])
+  const visibleEvents = useMemo(
+    () => events.filter((event) => filters[event.category]),
+    [events, filters],
+  )
 
   const monthGridDays = useMemo(() => {
     const gridStart = getMonthGridStart(viewDate.getFullYear(), viewDate.getMonth())
-    return Array.from({ length: 42 }, (_, i) => {
+    const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1)
+    const leadingDays = (firstOfMonth.getDay() + 6) % 7
+    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate()
+    const gridLength = Math.ceil((leadingDays + daysInMonth) / 7) * 7
+    return Array.from({ length: gridLength }, (_, i) => {
       const day = new Date(gridStart)
       day.setDate(day.getDate() + i)
       return day
@@ -309,47 +200,103 @@ function Calendar() {
   }, [viewDate])
 
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, { event: CalendarEvent; occurrenceStart: Date }[]>()
-    if (monthGridDays.length === 0) return map
+    return new Map(monthGridDays.map((day) => [dateKey(day), getDayOccurrences(visibleEvents, day)]))
+  }, [visibleEvents, monthGridDays])
 
-    const rangeStart = monthGridDays[0]
-    const rangeEnd = monthGridDays[monthGridDays.length - 1]
-
-    for (const event of events) {
-      for (const occurrenceStart of expandRecurrence(event, rangeStart, rangeEnd)) {
-        const key = dateKey(occurrenceStart)
-        const entry = { event, occurrenceStart }
-        const bucket = map.get(key)
-        if (bucket) bucket.push(entry)
-        else map.set(key, [entry])
-      }
-    }
-    for (const bucket of map.values()) {
-      bucket.sort((a, b) => a.occurrenceStart.getTime() - b.occurrenceStart.getTime())
-    }
-    return map
-  }, [events, monthGridDays])
-
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
     const trimmed = inputValue.trim()
-    localStorage.setItem(STORAGE_KEY, trimmed)
-    setIcsUrl(trimmed)
+    if (trimmed) {
+      try {
+        const url = new URL(trimmed)
+        if (!['https:', 'http:', 'webcal:'].includes(url.protocol)) {
+          setFormError('Use an HTTPS, HTTP or webcal calendar link.')
+          return
+        }
+      } catch {
+        setFormError('Enter a valid iCal URL.')
+        return
+      }
+    }
+    try {
+      saveIcsUrl(trimmed)
+      setDialog(null)
+    } catch (storageError) {
+      console.error('Unable to save calendar settings:', storageError)
+      setFormError('Unable to save settings. Please allow browser storage and try again.')
+    }
+  }
+
+  function addEvent(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const data = new FormData(e.currentTarget)
+    const summary = String(data.get('summary') ?? '').trim()
+    const start = new Date(String(data.get('start') ?? ''))
+    const endValue = String(data.get('end') ?? '')
+    const end = endValue ? new Date(endValue) : undefined
+    if (!summary || Number.isNaN(start.getTime()) || (end && (Number.isNaN(end.getTime()) || end <= start))) {
+      setFormError('Enter an event title and valid start time. The end must be after the start.')
+      return
+    }
+    addPersonalEvent({
+      uid: crypto.randomUUID(), summary, start, end,
+      location: String(data.get('location') ?? '').trim(),
+      category: 'personal', allDay: false, exdates: [],
+    })
+    setViewDate(new Date(start.getFullYear(), start.getMonth(), 1))
+    setSelectedDay(start)
+    setDialog(null)
+  }
+
+  function openDialog(value: 'settings' | 'add') {
+    setSelectedOccurrence(null)
+    setInputValue(icsUrl)
+    setFormError('')
+    setDialog(value)
   }
 
   function goToMonth(offset: number) {
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1))
   }
 
-  const today = new Date()
+  const selectedDayEvents = eventsByDay.get(dateKey(selectedDay)) ?? []
+  const nextDeadline = visibleEvents
+    .filter((event) => event.category === 'deadline' && event.start >= today)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())[0]
 
   return (
     <div className="calendar">
-      <h3>Calendar</h3>
+      <nav className="calendar-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/home">My portal</Link><span aria-hidden="true">›</span><span aria-current="page">Calendar</span>
+      </nav>
+      <header className="calendar-heading">
+        <div><h1>Your calendar</h1><p>Classes, deadlines and campus moments. Make room for what matters.</p></div>
+        <div className="calendar-actions">
+          <button type="button" className="calendar-submit" onClick={() => openDialog('add')}>+ Add event</button>
+          <button type="button" className="calendar-secondary" onClick={() => openDialog('settings')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="white" /><circle cx="15" cy="17" r="3" fill="white" />
+            </svg>
+            Settings
+          </button>
+        </div>
+      </header>
+      <div className="calendar-toolbar">
+        <div className="calendar-filters">
+          {FILTER_CATEGORIES.map((category) => (
+            <button key={category} type="button" className="calendar-secondary" aria-pressed={filters[category]}
+              onClick={() => setFilters((previous) => ({ ...previous, [category]: !previous[category] }))}>
+              <span aria-hidden="true">{filters[category] ? '✓' : '+'}</span> {calendarCategoryLabels[category]}
+            </button>
+          ))}
+        </div>
+        <span className="calendar-status">{icsUrl ? 'iCal timetable connected' : 'Connect your timetable in Settings'}</span>
+      </div>
 
       {loading && <p className="calendar-status">Loading events…</p>}
-      {error && <p className="calendar-status calendar-error">{error}</p>}
+      {error && <p role="alert" className="calendar-status calendar-error">{error}</p>}
 
+      <div className="calendar-layout">
       <div className="calendar-month">
         <div className="calendar-month-header">
           <button type="button" className="calendar-nav" onClick={() => goToMonth(-1)} aria-label="Previous month">
@@ -361,6 +308,11 @@ function Calendar() {
           <button type="button" className="calendar-nav" onClick={() => goToMonth(1)} aria-label="Next month">
             ›
           </button>
+          <button type="button" className="calendar-secondary calendar-today" onClick={() => {
+            setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
+            setSelectedDay(today)
+          }}>Today</button>
+          <span className="calendar-view-label">Month</span>
         </div>
 
         <div className="calendar-grid calendar-weekdays">
@@ -380,12 +332,14 @@ function Calendar() {
             return (
               <div
                 key={day.toISOString()}
-                className={`calendar-day${isCurrentMonth ? '' : ' calendar-day-muted'}${isToday ? ' calendar-day-today' : ''}`}
+                className={`calendar-day${isCurrentMonth ? '' : ' calendar-day-muted'}${isToday ? ' calendar-day-today' : ''}${dateKey(day) === dateKey(selectedDay) ? ' calendar-day-selected' : ''}`}
+                onClick={() => setSelectedDay(day)}
               >
-                <span className="calendar-day-number">{day.getDate()}</span>
+                <button type="button" className="calendar-day-number" aria-label={`View events for ${day.toDateString()}`}
+                  aria-pressed={dateKey(day) === dateKey(selectedDay)} onClick={() => setSelectedDay(day)}>{day.getDate()}</button>
                 <div className="calendar-day-events">
                   {dayEvents.map(({ event, occurrenceStart }) => {
-                    const color = getCourseColor(event.summary)
+                    const color = getCourseColor(event)
                     return (
                       <button
                         key={`${event.uid}-${occurrenceStart.getTime()}`}
@@ -393,7 +347,11 @@ function Calendar() {
                         className="calendar-day-event"
                         style={{ backgroundColor: color.background, color: color.color }}
                         title={event.summary}
-                        onClick={() => setSelectedOccurrence({ event, occurrenceStart })}
+                        aria-haspopup="dialog"
+                        onClick={(click) => {
+                          click.stopPropagation()
+                          setSelectedOccurrence({ event, occurrenceStart, day, anchor: click.currentTarget })
+                        }}
                       >
                         {!event.allDay && (
                           <span className="calendar-day-event-time">{formatEventTime(occurrenceStart, event.allDay)}</span>
@@ -408,40 +366,67 @@ function Calendar() {
           })}
         </div>
       </div>
+      <aside className="calendar-agenda">
+        <section className="calendar-agenda-card">
+          <h2>{selectedDay.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+          <span className="calendar-agenda-count">{dateKey(selectedDay) === dateKey(today) ? 'Today · ' : ''}{selectedDayEvents.length} events</span>
+          {selectedDayEvents.length === 0 && <p className="calendar-status">No events for this day.</p>}
+          {selectedDayEvents.map(({ event, occurrenceStart }) => (
+            <div className="calendar-agenda-event" key={`${event.uid}-${occurrenceStart.getTime()}`}>
+              <span style={{ color: getCourseColor(event).color }}>{formatEventTime(occurrenceStart, event.allDay)} · {calendarCategoryLabels[event.category]}</span>
+              <strong>{event.summary}</strong>
+              {event.location && <span>{event.location}</span>}
+              {event.demo && <span>Demo event</span>}
+            </div>
+          ))}
+        </section>
+        {filters.deadline && (
+          <section className="calendar-agenda-card calendar-next-deadline">
+            <h2>Next deadline</h2>
+            {nextDeadline ? <>
+              <strong>{nextDeadline.summary}</strong>
+              <p>{formatEventTimeRange(nextDeadline.start, nextDeadline)}</p>
+              <p className="calendar-status">Demo task · Not an actual course deadline</p>
+              <a href={nextDeadline.url} target="_blank" rel="noopener noreferrer">Open Moodle ↗</a>
+            </> : <p>No upcoming deadlines.</p>}
+          </section>
+        )}
+      </aside>
+      </div>
 
-      <form className="calendar-form" onSubmit={handleSubmit}>
-        <input
-          type="url"
-          className="calendar-input"
-          placeholder="Paste an iCal (.ics) link"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-        <button type="submit" className="calendar-submit">
-          Load
-        </button>
-      </form>
+      {dialog === 'settings' && (
+        <CalendarDialog title="Calendar settings" onClose={() => setDialog(null)}>
+          <p>Connect your timetable using an iCal (.ics) subscription link.</p>
+          <form className="calendar-form" onSubmit={handleSubmit}>
+            <label htmlFor="ical-url">iCal link</label>
+            <input id="ical-url" type="text" inputMode="url" className="calendar-input"
+              placeholder="https://… or webcal://…" value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
+            <p className="calendar-status">Leave blank to disconnect. The link is saved for your account in this browser.</p>
+            {formError && <p className="calendar-error" role="alert">{formError}</p>}
+            <button type="submit" className="calendar-submit">Save settings</button>
+          </form>
+        </CalendarDialog>
+      )}
+      {dialog === 'add' && (
+        <CalendarDialog title="Add event" onClose={() => setDialog(null)}>
+          <form className="calendar-form" onSubmit={addEvent}>
+            <label htmlFor="event-summary">Event title</label>
+            <input className="calendar-input" id="event-summary" name="summary" required />
+            <label htmlFor="event-start">Start</label>
+            <input className="calendar-input" id="event-start" name="start" type="datetime-local" required />
+            <label htmlFor="event-end">End (optional)</label>
+            <input className="calendar-input" id="event-end" name="end" type="datetime-local" />
+            <label htmlFor="event-location">Location (optional)</label>
+            <input className="calendar-input" id="event-location" name="location" />
+            <p className="calendar-status">Personal events are shared with Home until you refresh or sign out.</p>
+            {formError && <p className="calendar-error" role="alert">{formError}</p>}
+            <button type="submit" className="calendar-submit">Add event</button>
+          </form>
+        </CalendarDialog>
+      )}
 
       {selectedOccurrence && (
-        <div className="calendar-modal-backdrop" onClick={() => setSelectedOccurrence(null)}>
-          <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="calendar-modal-close"
-              aria-label="Close"
-              onClick={() => setSelectedOccurrence(null)}
-            >
-              ×
-            </button>
-            <h4 className="calendar-modal-title">{selectedOccurrence.event.summary}</h4>
-            <p className="calendar-modal-time">
-              {formatEventTimeRange(selectedOccurrence.occurrenceStart, selectedOccurrence.event)}
-            </p>
-            {selectedOccurrence.event.location && (
-              <p className="calendar-modal-location">{selectedOccurrence.event.location}</p>
-            )}
-          </div>
-        </div>
+        <EventDetails selection={selectedOccurrence} onClose={() => setSelectedOccurrence(null)} />
       )}
     </div>
   )

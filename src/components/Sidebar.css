@@ -133,7 +133,8 @@
 
 .sidebar-user:hover,
 .sidebar-user.active {
-  border-color: #b5b8a8;
+  border-color: #ffe433;
+  background-color: #fff9d1;
 }
 
 .sidebar-user-details {
@@ -162,15 +163,6 @@
   margin-top: 0.2rem;
   color: #777c70;
   font-size: 0.8rem;
-}
-
-.sidebar-role {
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background-color: #eaf1fe;
-  color: #2a5ca4;
-  font-size: 0.8rem;
-  font-weight: 600;
 }
 
 .sidebar a:focus-visible {

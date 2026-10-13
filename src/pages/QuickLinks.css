@@ -1,54 +1,201 @@
-.service-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-top: 0.5rem;
+.quick-links-page {
+  color: #292d27;
+  font-size: 0.875rem;
 }
 
-@media (max-width: 768px) {
+.app-content:has(.quick-links-page) {
+  background: #f6f6f2;
+}
+
+.quick-breadcrumb {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 2rem;
+  font-size: 0.75rem;
+}
+
+.quick-breadcrumb a {
+  color: #777c70;
+  text-decoration: none;
+}
+
+.quick-heading,
+.quick-toolbar,
+.favourites-dialog header,
+.favourites-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.quick-heading {
+  margin-bottom: 1.75rem;
+}
+
+.quick-heading h1 {
+  font-size: 1.9rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.quick-heading p,
+.quick-group > p,
+.quick-service-count,
+.quick-empty {
+  color: #777c70;
+  margin: 0;
+}
+
+.quick-button {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #e7e8e0;
+  border-radius: 9px;
+  background: white;
+  color: #292d27;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.quick-button:hover {
+  border-color: #b5b8a8;
+}
+
+.quick-button--active {
+  background: #ffe433;
+  border-color: #ffe433;
+}
+
+.quick-links-page :focus-visible,
+.favourites-dialog :focus-visible {
+  outline: 2px solid #315f9e;
+  outline-offset: 3px;
+}
+
+.quick-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1.75rem;
+}
+
+.quick-toolbar input {
+  width: min(100%, 400px);
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #e7e8e0;
+  border-radius: 9px;
+  font: inherit;
+  background: white;
+}
+
+.quick-service-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+
+.quick-group {
+  margin-bottom: 1.75rem;
+}
+
+.quick-group h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 0.3rem;
+}
+
+.quick-group > p {
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.favourites-dialog {
+  width: 600px;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 16px;
+  color: #292d27;
+  background: white;
+}
+
+.favourites-dialog::backdrop {
+  background: #0f172a80;
+}
+
+.favourites-dialog h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.favourites-dialog > p {
+  font-size: 0.875rem;
+}
+
+.favourites-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.favourites-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  border: 1px solid #e7e8e0;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.favourites-options label:has(input:checked) {
+  border-color: #ffe433;
+  background: #fff9cf;
+}
+
+.favourites-options label:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.favourites-options input {
+  accent-color: #315f9e;
+}
+
+.favourites-actions {
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.quick-error {
+  color: #a32727;
+}
+
+@media (max-width: 1100px) {
   .service-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.service-card {
-  display: block;
-  padding: 1.25rem;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background-color: #ffffff;
-  text-decoration: none;
-  color: inherit;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
+@media (max-width: 600px) {
+  .quick-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-.service-card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-}
-
-.service-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.service-card-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.service-card-title {
-  font-weight: 600;
-  font-size: 1.05rem;
-  margin: 0;
-}
-
-.service-card-desc {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #64748b;
+  .service-grid,
+  .favourites-options {
+    grid-template-columns: 1fr;
+  }
 }

@@ -1,0 +1,29 @@
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.role-badge--student {
+  background: #eaf1fe;
+  color: #2a5ca4;
+}
+
+.role-badge--tutor {
+  background: #e4f2eb;
+  color: #28775e;
+}
+
+.role-badge--professor {
+  background: #eee8f8;
+  color: #70449a;
+}

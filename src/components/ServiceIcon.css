@@ -1,0 +1,33 @@
+.service-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.service-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.service-icon--blue {
+  color: #315f9e;
+  background: #eaf1fe;
+}
+
+.service-icon--green {
+  color: #28775e;
+  background: #e4f2eb;
+}
+
+.service-icon--purple {
+  color: #70449a;
+  background: #eee8f8;
+}
+
+.service-icon--yellow {
+  color: #615625;
+  background: #fff9cf;
+}

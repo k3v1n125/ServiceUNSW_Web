@@ -1,0 +1,40 @@
+.service-card {
+  display: block;
+  text-decoration: none;
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: white;
+  color: #292d27;
+}
+
+a.service-card:hover {
+  box-shadow: 0 0 0 1px #b5b8a8;
+}
+
+a.service-card:focus-visible {
+  outline: 2px solid #315f9e;
+  outline-offset: 3px;
+}
+
+.service-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.service-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.service-card p {
+  margin: 0;
+  color: #777c70;
+  font-size: 0.75rem;
+}
+
+.service-favourite-mark {
+  font-size: 1.2rem;
+}
