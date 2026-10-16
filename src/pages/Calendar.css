@@ -152,7 +152,11 @@
 }
 
 .calendar-month-label {
+  /* Fixed width (fits "September 0000") keeps the arrows still between months */
+  width: 9.5em;
   font-size: 1.15rem;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .calendar-today {

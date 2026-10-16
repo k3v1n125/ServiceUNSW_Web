@@ -130,12 +130,10 @@ function getMonthGridStart(year: number, month: number): Date {
 const COURSE_COLOR_PALETTE = [
   { background: '#dbeafe', color: '#1e3a8a' },
   { background: '#dcfce7', color: '#166534' },
-  { background: '#fef3c7', color: '#92400e' },
   { background: '#fce7f3', color: '#9d174d' },
   { background: '#ede9fe', color: '#5b21b6' },
   { background: '#ffe4e6', color: '#9f1239' },
   { background: '#cffafe', color: '#155e75' },
-  { background: '#fef9c3', color: '#854d0e' },
   { background: '#e0e7ff', color: '#3730a3' },
   { background: '#d1fae5', color: '#065f46' },
 ]
@@ -259,7 +257,10 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1))
   }
 
-  const selectedDayEvents = eventsByDay.get(dateKey(selectedDay)) ?? []
+  const selectedDayEvents = useMemo(
+    () => eventsByDay.get(dateKey(selectedDay)) ?? getDayOccurrences(visibleEvents, selectedDay),
+    [eventsByDay, selectedDay, visibleEvents],
+  )
   const nextDeadline = visibleEvents
     .filter((event) => event.category === 'deadline' && event.start >= today)
     .sort((a, b) => a.start.getTime() - b.start.getTime())[0]

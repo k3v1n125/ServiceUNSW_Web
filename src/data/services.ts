@@ -28,7 +28,7 @@ export const quickLinkServices: QuickLinkService[] = [
   { id: 'enrolment', name: 'Enrolment', description: 'Manage courses and review your enrolment.', group: 'admin', icon: 'clipboard', tone: 'blue' },
   { id: 'myplan', name: 'myPlan', description: 'Plan your degree pathway.', group: 'admin', icon: 'plan', tone: 'green' },
   { id: 'results', name: 'Results & records', description: 'See your grades and request academic records.', group: 'admin', icon: 'file', tone: 'purple' },
-  { id: 'email', name: 'Student email', description: 'Open your inbox and university messages.', group: 'campus', icon: 'mail', tone: 'yellow' },
+  { id: 'email', name: 'Student email', description: 'Open your inbox and university messages.', group: 'campus', icon: 'mail', tone: 'yellow', url: 'https://outlook.office.com/mail/' },
   { id: 'map', name: 'Campus map', description: 'Find your classroom, building or next coffee.', group: 'campus', icon: 'map', tone: 'green' },
   { id: 'it', name: 'IT help', description: 'Get help with accounts, Wi-Fi and software.', group: 'campus', icon: 'monitor', tone: 'blue', url: 'https://www.unsw.edu.au/myit' },
   { id: 'wellbeing', name: 'Student wellbeing', description: 'Find confidential advice and support services.', group: 'campus', icon: 'heart', tone: 'purple', url: 'https://www.unsw.edu.au/student/support' },
