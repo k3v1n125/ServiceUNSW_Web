@@ -1,0 +1,53 @@
+[
+  {
+    "uid": "demo-comp3311-assignment",
+    "summary": "COMP3311 · Database design assignment",
+    "dayOffset": 1,
+    "startHour": 17,
+    "category": "deadline",
+    "url": "https://moodle.telt.unsw.edu.au/"
+  },
+  {
+    "uid": "demo-comp3511-report",
+    "summary": "COMP3511 · HCI report",
+    "dayOffset": 5,
+    "startHour": 17,
+    "category": "deadline",
+    "url": "https://moodle.telt.unsw.edu.au/"
+  },
+  {
+    "uid": "demo-comp1531-project",
+    "summary": "COMP1531 · Group project milestone",
+    "dayOffset": 8,
+    "startHour": 23,
+    "category": "deadline",
+    "url": "https://moodle.telt.unsw.edu.au/"
+  },
+  {
+    "uid": "demo-devsoc-workshop",
+    "summary": "DevSoc · Web development workshop",
+    "location": "UNSW Kensington · CSE building",
+    "dayOffset": 0,
+    "startHour": 18,
+    "endHour": 20,
+    "category": "campus"
+  },
+  {
+    "uid": "demo-devsoc-social",
+    "summary": "DevSoc · Games and pizza social",
+    "location": "UNSW Kensington · Village Green",
+    "dayOffset": 3,
+    "startHour": 17,
+    "endHour": 19,
+    "category": "campus"
+  },
+  {
+    "uid": "demo-careers-panel",
+    "summary": "DevSoc · Tech careers panel",
+    "location": "UNSW Kensington · Roundhouse",
+    "dayOffset": 7,
+    "startHour": 16,
+    "endHour": 18,
+    "category": "campus"
+  }
+]

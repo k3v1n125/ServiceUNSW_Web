@@ -1,0 +1,12 @@
+{
+  "periodStart": "2026-10-26",
+  "periodEnd": "2026-11-20",
+  "defaultDays": ["Wednesday", "Friday"],
+  "professorDays": {
+    "sam": ["Tuesday", "Thursday"]
+  },
+  "slots": [
+    { "startTime": "09:00", "endTime": "11:00", "location": "Ainsworth G03" },
+    { "startTime": "10:00", "endTime": "12:00", "location": "Law Theatre G04" }
+  ]
+}
