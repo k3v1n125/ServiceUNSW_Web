@@ -163,8 +163,11 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const FILTER_CATEGORIES: CalendarCategory[] = ['timetable', 'deadline', 'campus']
 
 function Calendar({ calendar }: { calendar: CalendarData }) {
-  const { today, events, icsUrl, loading, error, saveIcsUrl, addPersonalEvent } = calendar
+  const {
+    today, events, icsUrl, loading, error, personalEventsError, personalEventsReady, saveIcsUrl, addPersonalEvent,
+  } = calendar
   const [inputValue, setInputValue] = useState(icsUrl)
+  const [saving, setSaving] = useState(false)
   const [filters, setFilters] = useState<Record<CalendarCategory, boolean>>({
     timetable: true, deadline: true, campus: true, personal: true,
   })
@@ -201,7 +204,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
     return new Map(monthGridDays.map((day) => [dateKey(day), getDayOccurrences(visibleEvents, day)]))
   }, [visibleEvents, monthGridDays])
 
-  function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
     const trimmed = inputValue.trim()
     if (trimmed) {
@@ -216,16 +219,19 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
         return
       }
     }
+    setSaving(true)
     try {
-      saveIcsUrl(trimmed)
+      await saveIcsUrl(trimmed)
       setDialog(null)
-    } catch (storageError) {
-      console.error('Unable to save calendar settings:', storageError)
-      setFormError('Unable to save settings. Please allow browser storage and try again.')
+    } catch (saveError) {
+      console.error('Unable to save calendar settings:', saveError)
+      setFormError(saveError instanceof Error ? saveError.message : 'Unable to save settings. Try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  function addEvent(e: SubmitEvent<HTMLFormElement>) {
+  async function addEvent(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
     const summary = String(data.get('summary') ?? '').trim()
@@ -236,14 +242,22 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
       setFormError('Enter an event title and valid start time. The end must be after the start.')
       return
     }
-    addPersonalEvent({
-      uid: crypto.randomUUID(), summary, start, end,
-      location: String(data.get('location') ?? '').trim(),
-      category: 'personal', allDay: false, exdates: [],
-    })
-    setViewDate(new Date(start.getFullYear(), start.getMonth(), 1))
-    setSelectedDay(start)
-    setDialog(null)
+    setSaving(true)
+    try {
+      await addPersonalEvent({
+        uid: crypto.randomUUID(), summary, start, end,
+        location: String(data.get('location') ?? '').trim(),
+        category: 'personal', allDay: false, exdates: [],
+      })
+      setViewDate(new Date(start.getFullYear(), start.getMonth(), 1))
+      setSelectedDay(start)
+      setDialog(null)
+    } catch (saveError) {
+      console.error('Unable to save personal event:', saveError)
+      setFormError(saveError instanceof Error ? saveError.message : 'Unable to save event. Try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function openDialog(value: 'settings' | 'add') {
@@ -273,7 +287,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
       <header className="calendar-heading">
         <div><h1>Your calendar</h1><p>Classes, deadlines and campus moments. Make room for what matters.</p></div>
         <div className="calendar-actions">
-          <button type="button" className="calendar-submit" onClick={() => openDialog('add')}>+ Add event</button>
+          <button type="button" className="calendar-submit" disabled={!personalEventsReady} onClick={() => openDialog('add')}>+ Add event</button>
           <button type="button" className="calendar-secondary" onClick={() => openDialog('settings')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="white" /><circle cx="15" cy="17" r="3" fill="white" />
@@ -296,6 +310,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
 
       {loading && <p className="calendar-status">Loading events…</p>}
       {error && <p role="alert" className="calendar-status calendar-error">{error}</p>}
+      {personalEventsError && <p role="alert" className="calendar-status calendar-error">{personalEventsError}</p>}
 
       <div className="calendar-layout">
       <div className="calendar-month">
@@ -402,9 +417,9 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
             <label htmlFor="ical-url">iCal link</label>
             <input id="ical-url" type="text" inputMode="url" className="calendar-input"
               placeholder="https://… or webcal://…" value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
-            <p className="calendar-status">Leave blank to disconnect. The link is saved for your account in this browser.</p>
+            <p className="calendar-status">Leave blank to disconnect. The link is saved to your account in the mock database.</p>
             {formError && <p className="calendar-error" role="alert">{formError}</p>}
-            <button type="submit" className="calendar-submit">Save settings</button>
+            <button type="submit" className="calendar-submit" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
           </form>
         </CalendarDialog>
       )}
@@ -419,9 +434,9 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
             <input className="calendar-input" id="event-end" name="end" type="datetime-local" />
             <label htmlFor="event-location">Location (optional)</label>
             <input className="calendar-input" id="event-location" name="location" />
-            <p className="calendar-status">Personal events are shared with Home until you refresh or sign out.</p>
+            <p className="calendar-status">Personal events are saved to your account in the mock database.</p>
             {formError && <p className="calendar-error" role="alert">{formError}</p>}
-            <button type="submit" className="calendar-submit">Add event</button>
+            <button type="submit" className="calendar-submit" disabled={saving}>{saving ? 'Saving…' : 'Add event'}</button>
           </form>
         </CalendarDialog>
       )}

@@ -54,6 +54,19 @@ const navigation = [
 ]
 
 function Sidebar({ user }: { user: User }) {
+  const teachingNavigation = user.roles.includes('professor')
+    ? [{
+        to: '/lectures',
+        label: 'Lectures',
+        icon: (
+          <>
+            <path d="M3 5h18v12H3z" />
+            <path d="m8 21 4-4 4 4M8 9h8m-8 4h5" />
+          </>
+        ),
+      }]
+    : []
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -77,6 +90,21 @@ function Sidebar({ user }: { user: User }) {
             </li>
           ))}
         </ul>
+        {teachingNavigation.length > 0 && (
+          <>
+            <p className="sidebar-section-label sidebar-teaching-label">Teaching</p>
+            <ul className="sidebar-nav">
+              {teachingNavigation.map(({ to, label, icon }) => (
+                <li key={to}>
+                  <NavLink to={to} end className={({ isActive }) => (isActive ? 'active' : '')}>
+                    <SidebarIcon>{icon}</SidebarIcon>
+                    <span>{label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </nav>
 
       <div className="sidebar-footer">

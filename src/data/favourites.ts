@@ -12,14 +12,8 @@ export function validateFavourites(value: unknown): string[] {
   return value
 }
 
-export function readFavourites(userId: string, storage: Pick<Storage, 'getItem'>): string[] {
-  const saved = storage.getItem(`serviceunsw-favourites-${userId}`)
-  if (saved === null) return [...DEFAULT_FAVOURITES]
-  const parsed: unknown = JSON.parse(saved)
-  const migrated = Array.isArray(parsed) ? parsed.map((id) => id === 'fees' ? 'myplan' : id) : parsed
+export function parseFavourites(value: unknown): string[] {
+  if (value === null) return [...DEFAULT_FAVOURITES]
+  const migrated = Array.isArray(value) ? value.map((id) => id === 'fees' ? 'myplan' : id) : value
   return validateFavourites(migrated)
-}
-
-export function saveFavourites(userId: string, ids: string[], storage: Pick<Storage, 'setItem'>): void {
-  storage.setItem(`serviceunsw-favourites-${userId}`, JSON.stringify(validateFavourites(ids)))
 }

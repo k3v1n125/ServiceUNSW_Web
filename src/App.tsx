@@ -7,6 +7,7 @@ import { useFavourites } from './hooks/useFavourites'
 import Sidebar from './components/Sidebar'
 import Calendar from './pages/Calendar'
 import Home from './pages/Home'
+import Lectures from './pages/Lectures'
 import Profile from './pages/Profile'
 import QuickLinks from './pages/QuickLinks'
 import SignIn from './pages/SignIn'
@@ -66,6 +67,10 @@ function Portal({ user, onSignOut }: { user: User; onSignOut: () => void }) {
           <Route path="/home" element={<Home user={user} calendar={calendar} favourites={favourites} />} />
           <Route path="/calendar" element={<Calendar calendar={calendar} />} />
           <Route path="/quick-links" element={<QuickLinks favourites={favourites} user={user} />} />
+          <Route
+            path="/lectures"
+            element={user.roles.includes('professor') ? <Lectures user={user} /> : <Navigate to="/home" replace />}
+          />
           <Route path="/profile" element={<Profile user={user} onSignOut={onSignOut} />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>

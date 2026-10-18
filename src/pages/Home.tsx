@@ -85,8 +85,9 @@ function Home({ user, calendar, favourites }: { user: User; calendar: CalendarDa
               <ServiceCard service={service} favourite key={service.id} />
             ))}
           </div>
+          {favourites.loading && <p className="home-muted" role="status">Loading favourites…</p>}
           {favourites.error && <p className="home-schedule-error" role="alert">{favourites.error}</p>}
-          {favouriteServices.length === 0 && <p className="home-muted">No favourites yet. Choose up to four in <Link to="/quick-links">Quick links</Link>.</p>}
+          {!favourites.loading && !favourites.error && favouriteServices.length === 0 && <p className="home-muted">No favourites yet. Choose up to four in <Link to="/quick-links">Quick links</Link>.</p>}
         </section>
       </div>
 

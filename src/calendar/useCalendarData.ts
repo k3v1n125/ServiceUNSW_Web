@@ -1,26 +1,110 @@
 import { useEffect, useMemo, useState } from 'react'
+import { readUserRecord, writeUserRecord } from '../api/mockDatabase'
 import { createDemoEvents } from '../data/calendar'
 import type { CalendarEvent } from '../data/calendar'
 import { parseIcs } from './events'
 
-export function useCalendarData(userId: string) {
-  const storageKey = `serviceunsw-ical-url-${userId}`
-  const [initialSettings] = useState(() => {
-    try {
-      return { url: localStorage.getItem(storageKey) ?? '', error: null }
-    } catch (error) {
-      console.error('Unable to read calendar settings:', error)
-      return { url: '', error: 'Unable to read saved calendar settings. Please allow browser storage.' }
+interface StoredPersonalEvent {
+  uid: string
+  summary: string
+  start: string
+  end?: string
+  location?: string
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function parseCalendarSettings(value: unknown): string {
+  if (value === null) return ''
+  if (!isRecord(value) || typeof value.icsUrl !== 'string') {
+    throw new Error('Calendar settings returned by the mock API are invalid.')
+  }
+  return value.icsUrl
+}
+
+function parsePersonalEvents(value: unknown): CalendarEvent[] {
+  if (value === null) return []
+  if (!Array.isArray(value)) throw new Error('Personal events returned by the mock API are invalid.')
+  return value.map((event) => {
+    if (!isRecord(event) || typeof event.uid !== 'string' || typeof event.summary !== 'string' ||
+      typeof event.start !== 'string' || (event.end !== undefined && typeof event.end !== 'string') ||
+      (event.location !== undefined && typeof event.location !== 'string')) {
+      throw new Error('A personal event returned by the mock API is invalid.')
+    }
+    const start = new Date(event.start)
+    const end = typeof event.end === 'string' ? new Date(event.end) : undefined
+    if (Number.isNaN(start.getTime()) || (end && Number.isNaN(end.getTime()))) {
+      throw new Error('A personal event returned by the mock API has an invalid date.')
+    }
+    return {
+      uid: event.uid,
+      summary: event.summary,
+      start,
+      end,
+      location: typeof event.location === 'string' ? event.location : '',
+      category: 'personal',
+      allDay: false,
+      exdates: [],
     }
   })
-  const [icsUrl, setIcsUrl] = useState(initialSettings.url)
+}
+
+function toStoredPersonalEvent(event: CalendarEvent): StoredPersonalEvent {
+  return {
+    uid: event.uid,
+    summary: event.summary,
+    start: event.start.toISOString(),
+    ...(event.end ? { end: event.end.toISOString() } : {}),
+    ...(event.location ? { location: event.location } : {}),
+  }
+}
+
+export function useCalendarData(userId: string) {
+  const [icsUrl, setIcsUrl] = useState('')
   const [feedRevision, setFeedRevision] = useState(0)
   const [importedEvents, setImportedEvents] = useState<CalendarEvent[]>([])
   const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([])
-  const [loading, setLoading] = useState(!!initialSettings.url)
-  const [error, setError] = useState<string | null>(initialSettings.error)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [personalEventsError, setPersonalEventsError] = useState<string | null>(null)
+  const [personalEventsReady, setPersonalEventsReady] = useState(false)
   const [today] = useState(() => new Date())
   const [demoEvents] = useState(() => createDemoEvents(today))
+
+  useEffect(() => {
+    let cancelled = false
+    readUserRecord(userId, 'calendar-settings')
+      .then((value) => {
+        if (cancelled) return
+        const url = parseCalendarSettings(value)
+        setIcsUrl(url)
+        setLoading(!!url)
+      })
+      .catch((settingsError: unknown) => {
+        console.error('Unable to read calendar settings:', settingsError)
+        if (cancelled) return
+        setError('Unable to read saved calendar settings from the mock database.')
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [userId])
+
+  useEffect(() => {
+    let cancelled = false
+    readUserRecord(userId, 'personal-events')
+      .then((value) => {
+        if (cancelled) return
+        setPersonalEvents(parsePersonalEvents(value))
+        setPersonalEventsReady(true)
+      })
+      .catch((eventsError: unknown) => {
+        console.error('Unable to read personal events:', eventsError)
+        if (!cancelled) setPersonalEventsError('Unable to load personal events from the mock database.')
+      })
+    return () => { cancelled = true }
+  }, [userId])
 
   useEffect(() => {
     if (!icsUrl) return
@@ -49,20 +133,39 @@ export function useCalendarData(userId: string) {
     [icsUrl, importedEvents, demoEvents, personalEvents],
   )
 
-  function saveIcsUrl(url: string) {
-    localStorage.setItem(storageKey, url)
+  async function saveIcsUrl(url: string) {
+    const savedUrl = parseCalendarSettings(await writeUserRecord(userId, 'calendar-settings', { icsUrl: url }))
     setImportedEvents([])
     setError(null)
-    setLoading(!!url)
-    setIcsUrl(url)
+    setLoading(!!savedUrl)
+    setIcsUrl(savedUrl)
     setFeedRevision((previous) => previous + 1)
   }
 
-  function addPersonalEvent(event: CalendarEvent) {
-    setPersonalEvents((previous) => [...previous, event])
+  async function addPersonalEvent(event: CalendarEvent) {
+    if (!personalEventsReady) {
+      throw new Error('Personal events must finish loading before adding a new event.')
+    }
+    const saved = await writeUserRecord(
+      userId,
+      'personal-events',
+      [...personalEvents, event].map(toStoredPersonalEvent),
+    )
+    setPersonalEvents(parsePersonalEvents(saved))
+    setPersonalEventsError(null)
   }
 
-  return { today, events, icsUrl, loading, error, saveIcsUrl, addPersonalEvent }
+  return {
+    today,
+    events,
+    icsUrl,
+    loading,
+    error,
+    personalEventsError,
+    personalEventsReady,
+    saveIcsUrl,
+    addPersonalEvent,
+  }
 }
 
 export type CalendarData = ReturnType<typeof useCalendarData>

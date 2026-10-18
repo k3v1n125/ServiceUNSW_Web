@@ -40,9 +40,9 @@ function FavouriteManager({ favourites, onClose }: { favourites: FavouritesState
       {favourites.error && <p className="quick-error" role="alert">{favourites.error}</p>}
       <div className="favourites-actions">
         <button type="button" className="quick-button" onClick={onClose}>Cancel</button>
-        <button type="button" className="quick-button quick-button--active" onClick={() => {
-          if (favourites.save(draft)) onClose()
-        }}>Save favourites</button>
+        <button type="button" className="quick-button quick-button--active" disabled={favourites.saving} onClick={async () => {
+          if (await favourites.save(draft)) onClose()
+        }}>{favourites.saving ? 'Saving…' : 'Save favourites'}</button>
       </div>
     </dialog>
   )
@@ -68,7 +68,7 @@ function QuickLinks({ favourites, user }: { favourites: FavouritesState; user: U
           <h1>A shortcut to what you need</h1>
           <p>Your university services, all in one place. Choose favourites to keep them on Home.</p>
         </div>
-        <button type="button" className="quick-button" onClick={() => setManaging(true)}>☆ Manage favourites</button>
+        <button type="button" className="quick-button" disabled={favourites.loading} onClick={() => setManaging(true)}>☆ Manage favourites</button>
       </header>
       <div className="quick-toolbar">
         <input type="search" aria-label="Search university services" placeholder="Search university services"
