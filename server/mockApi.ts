@@ -1,5 +1,6 @@
 import { copyFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import path from 'node:path'
 import type { Plugin } from 'vite'
@@ -157,7 +158,7 @@ interface StoredUser {
   zPass: string
   roles: string[]
   degree?: { name: string }
-  teachingAppointments: { courseCode: string; courseName: string; role: string }[]
+  teachingAppointments: { courseCode: string; courseName: string; role: string; coordinator: string }[]
   [field: string]: unknown
 }
 
@@ -184,6 +185,69 @@ interface LectureScheduleTable {
   defaultDays: string[]
   professorDays: Record<string, string[]>
   slots: { startTime: string; endTime: string; location: string }[]
+}
+
+type TimesheetStatus = 'draft' | 'submitted' | 'approved'
+
+interface TimesheetEntry {
+  id: string
+  courseCode: string
+  date: string
+  activity: string
+  startTime: string
+  endTime: string
+  notes: string
+  status: TimesheetStatus
+}
+
+interface TimesheetSettings {
+  firstPeriodStart: string
+  periodLengthDays: number
+  openPeriodCount: number
+  activities: string[]
+}
+
+interface TimesheetPeriod {
+  start: string
+  end: string
+  status: 'open' | 'closed'
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/
+const MAX_TIMESHEET_ENTRIES = 1000
+
+function localDateString(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + days)
+  return value.toISOString().slice(0, 10)
+}
+
+function minutesOf(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+function buildTimesheetPeriods(settings: TimesheetSettings, today: string): TimesheetPeriod[] {
+  const periods: TimesheetPeriod[] = []
+  for (let start = settings.firstPeriodStart; start <= today || periods.length === 0; start = addDays(start, settings.periodLengthDays)) {
+    periods.push({ start, end: addDays(start, settings.periodLengthDays - 1), status: 'closed' })
+  }
+  periods.slice(-settings.openPeriodCount).forEach((period) => { period.status = 'open' })
+  return periods.reverse()
+}
+
+function sortTimesheetEntries(entries: TimesheetEntry[]): TimesheetEntry[] {
+  return [...entries].sort((a, b) =>
+    b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime))
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -272,6 +336,21 @@ export function mockApiPlugin({ seedDirectory, dataDirectory }: { seedDirectory:
     return operation
   }
 
+  function updateRecord<T>(file: string, userId: string, update: (current: unknown) => T | Promise<T>): Promise<T> {
+    const operation = writeQueue.then(async () => {
+      const filePath = path.join(dataDirectory, file)
+      const table = await readTable(file)
+      const next = await update(Object.hasOwn(table, userId) ? table[userId] : null)
+      table[userId] = next
+      const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
+      await writeFile(temporaryPath, `${JSON.stringify(table, null, 2)}\n`)
+      await rename(temporaryPath, filePath)
+      return next
+    })
+    writeQueue = operation.then(() => undefined, () => undefined)
+    return operation
+  }
+
   async function findUser(userId: string): Promise<StoredUser> {
     const users = await readJson<Record<string, StoredUser>>('users.json')
     if (!USER_ID_PATTERN.test(userId) || !Object.hasOwn(users, userId)) {
@@ -351,6 +430,134 @@ export function mockApiPlugin({ seedDirectory, dataDirectory }: { seedDirectory:
     }
   }
 
+  function readTimesheetEntries(value: unknown): TimesheetEntry[] {
+    return Array.isArray(value) ? value as TimesheetEntry[] : []
+  }
+
+  async function getTimesheetContext(user: StoredUser) {
+    if (!user.roles.includes('tutor')) {
+      throw new ApiError(403, 'Timesheets are only available to tutors.')
+    }
+    const settings = await readJson<TimesheetSettings>('timesheetSettings.json')
+    const today = localDateString(new Date())
+    return {
+      settings,
+      today,
+      periods: buildTimesheetPeriods(settings, today),
+      courses: user.teachingAppointments
+        .filter((appointment) => appointment.role === 'tutor')
+        .map(({ courseCode, courseName, coordinator }) => ({ courseCode, courseName, coordinator })),
+    }
+  }
+
+  async function getTimesheets(user: StoredUser) {
+    const context = await getTimesheetContext(user)
+    const table = await readTable('timesheets.json')
+    return {
+      today: context.today,
+      activities: context.settings.activities,
+      periods: context.periods,
+      courses: context.courses,
+      entries: sortTimesheetEntries(readTimesheetEntries(table[user.id])),
+    }
+  }
+
+  function validateTimesheetEntry(
+    value: unknown,
+    context: Awaited<ReturnType<typeof getTimesheetContext>>,
+  ): Omit<TimesheetEntry, 'id' | 'status'> {
+    if (!isRecord(value)) throw new ValidationError('Timesheet entry must be an object.')
+    const courseCode = requireText(value.courseCode, 'Course', 20)
+    if (!context.courses.some((course) => course.courseCode === courseCode)) {
+      throw new ValidationError('Choose a course you tutor.')
+    }
+    const date = requireText(value.date, 'Date', 10)
+    if (!DATE_PATTERN.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) ||
+      new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) {
+      throw new ValidationError('Enter a valid date.')
+    }
+    if (date > context.today) throw new ValidationError('You cannot record hours for a future date.')
+    const period = context.periods.find((candidate) => candidate.start <= date && date <= candidate.end)
+    if (!period || period.status !== 'open') {
+      throw new ValidationError('Hours can only be recorded in an open reporting period.')
+    }
+    const activity = requireText(value.activity, 'Activity', 50)
+    if (!context.settings.activities.includes(activity)) throw new ValidationError('Choose a valid activity.')
+    const startTime = requireText(value.startTime, 'Start time', 5)
+    const endTime = requireText(value.endTime, 'End time', 5)
+    if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
+      throw new ValidationError('Enter valid start and end times.')
+    }
+    const duration = minutesOf(endTime) - minutesOf(startTime)
+    if (duration <= 0) throw new ValidationError('End time must be after start time.')
+    if (duration > 12 * 60) throw new ValidationError('A single entry cannot exceed 12 hours.')
+    const notes = value.notes === undefined ? '' : requireText(value.notes, 'Notes', 200, true)
+    return { courseCode, date, activity, startTime, endTime, notes }
+  }
+
+  function readSubmitFlag(body: unknown): boolean {
+    if (!isRecord(body) || body.submit === undefined) return false
+    if (typeof body.submit !== 'boolean') throw new ValidationError('Submit must be true or false.')
+    return body.submit
+  }
+
+  function assertNoOverlap(entries: TimesheetEntry[], entry: Omit<TimesheetEntry, 'id' | 'status'>, ignoreId?: string) {
+    const start = minutesOf(entry.startTime)
+    const end = minutesOf(entry.endTime)
+    const overlapping = entries.find((other) => other.id !== ignoreId && other.date === entry.date &&
+      minutesOf(other.startTime) < end && start < minutesOf(other.endTime))
+    if (overlapping) {
+      throw new ValidationError(`These times overlap your ${overlapping.activity.toLowerCase()} entry (${overlapping.startTime}–${overlapping.endTime}).`)
+    }
+  }
+
+  async function routeTimesheets(req: IncomingMessage, method: string, user: StoredUser, rest: string[]) {
+    const allow = (...methods: string[]) => {
+      if (!methods.includes(method)) throw new ApiError(405, 'Method not allowed.')
+    }
+    if (rest.length === 0) {
+      allow('GET')
+      return getTimesheets(user)
+    }
+    const context = await getTimesheetContext(user)
+
+    if (rest[0] === 'entries' && rest.length === 1) {
+      allow('POST')
+      const body = await readBody(req)
+      const fields = validateTimesheetEntry(body, context)
+      const status = readSubmitFlag(body) ? 'submitted' as const : 'draft' as const
+      await updateRecord('timesheets.json', user.id, (current) => {
+        const entries = readTimesheetEntries(current)
+        if (entries.length >= MAX_TIMESHEET_ENTRIES) throw new ValidationError('Too many timesheet entries.')
+        assertNoOverlap(entries, fields)
+        return [...entries, { id: randomUUID(), ...fields, status }]
+      })
+      return getTimesheets(user)
+    }
+
+    if (rest[0] === 'entries' && rest.length === 2) {
+      allow('PUT', 'DELETE')
+      const entryId = rest[1]
+      const body = method === 'PUT' ? await readBody(req) : undefined
+      const fields = body === undefined ? undefined : validateTimesheetEntry(body, context)
+      const status = readSubmitFlag(body) ? 'submitted' as const : 'draft' as const
+      await updateRecord('timesheets.json', user.id, (current) => {
+        const entries = readTimesheetEntries(current)
+        const existing = entries.find((entry) => entry.id === entryId)
+        if (!existing) throw new ApiError(404, 'Timesheet entry not found.')
+        if (existing.status !== 'draft') throw new ApiError(409, 'Only draft entries can be changed.')
+        const existingPeriod = context.periods.find((period) => period.start <= existing.date && existing.date <= period.end)
+        if (existingPeriod?.status !== 'open') throw new ApiError(409, 'This reporting period is closed.')
+        if (!fields) return entries.filter((entry) => entry.id !== entryId)
+        assertNoOverlap(entries, fields, entryId)
+        return entries.map((entry) => entry.id === entryId ? { ...entry, ...fields, status } : entry)
+      })
+      return getTimesheets(user)
+    }
+
+    throw new ApiError(404, 'Mock API resource not found.')
+  }
+
   async function route(req: IncomingMessage, segments: string[]): Promise<unknown> {
     const method = req.method ?? 'GET'
     function allow(...methods: string[]) {
@@ -360,6 +567,10 @@ export function mockApiPlugin({ seedDirectory, dataDirectory }: { seedDirectory:
     if (segments[0] === 'auth' && segments[1] === 'sign-in' && segments.length === 2) {
       allow('POST')
       return signIn(await readBody(req))
+    }
+
+    if (segments[0] === 'users' && segments[1] && segments[2] === 'timesheets' && segments.length <= 5) {
+      return routeTimesheets(req, method, await findUser(segments[1]), segments.slice(3))
     }
 
     if (segments[0] !== 'users' || !segments[1] || segments.length > 3) {
@@ -425,7 +636,7 @@ export function mockApiPlugin({ seedDirectory, dataDirectory }: { seedDirectory:
         return
       }
       if (error instanceof ApiError) {
-        if (error.statusCode === 405) res.setHeader('Allow', 'GET, PUT, POST')
+        if (error.statusCode === 405) res.setHeader('Allow', 'GET, PUT, POST, DELETE')
         sendJson(res, error.statusCode, { error: error.message })
         return
       }

@@ -1,6 +1,7 @@
 import type { CalendarCategory, CalendarEvent } from '../models/calendar'
 import type { LecturePlan, LectureWeekday } from '../models/lectures'
 import type { ServiceCatalogue } from '../models/services'
+import type { TimesheetEntryInput, Timesheets } from '../models/timesheets'
 import type { User } from '../models/users'
 
 export type MockResource =
@@ -125,4 +126,28 @@ export async function readUserRecord(userId: string, resource: MockResource): Pr
 
 export async function writeUserRecord(userId: string, resource: MockResource, value: unknown): Promise<unknown> {
   return sendJson(userUrl(userId, resource), 'PUT', value)
+}
+
+function parseTimesheets(value: unknown): Timesheets {
+  if (!isRecord(value) || typeof value.today !== 'string' || !Array.isArray(value.activities) ||
+    !Array.isArray(value.periods) || !Array.isArray(value.courses) || !Array.isArray(value.entries)) {
+    throw new Error('Timesheets returned by the mock API are invalid.')
+  }
+  return value as unknown as Timesheets
+}
+
+export async function fetchTimesheets(userId: string): Promise<Timesheets> {
+  return parseTimesheets(await request(userUrl(userId, 'timesheets')))
+}
+
+export async function createTimesheetEntry(userId: string, entry: TimesheetEntryInput, submit: boolean): Promise<Timesheets> {
+  return parseTimesheets(await sendJson(userUrl(userId, 'timesheets/entries'), 'POST', { ...entry, submit }))
+}
+
+export async function updateTimesheetEntry(userId: string, entryId: string, entry: TimesheetEntryInput, submit: boolean): Promise<Timesheets> {
+  return parseTimesheets(await sendJson(userUrl(userId, `timesheets/entries/${encodeURIComponent(entryId)}`), 'PUT', { ...entry, submit }))
+}
+
+export async function deleteTimesheetEntry(userId: string, entryId: string): Promise<Timesheets> {
+  return parseTimesheets(await request(userUrl(userId, `timesheets/entries/${encodeURIComponent(entryId)}`), { method: 'DELETE' }))
 }

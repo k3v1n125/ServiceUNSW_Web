@@ -1,6 +1,6 @@
 # ServiceUNSW
 
-Hey team, this is a short guide for getting started with this project so you can start developing straight away. It's a React + TypeScript app built with Vite, so if you've used React before this should feel familiar.
+This a React + TypeScript app built with Vite, so if you've used React before this should feel familiar.
 
 ## Prerequisites
 
@@ -41,7 +41,8 @@ The app never reads data files directly. Pages call a simulated API
 [server/mockApi.ts](server/mockApi.ts) inside the Vite dev and preview servers.
 
 - `server/seed/` — committed starting data (users, services, lecture schedule,
-  demo calendar events, starting teaching notes and empty user tables).
+  demo calendar events, timesheet settings, starting teaching notes and
+  timesheet entries, and empty user tables).
 - `.mockdb/` — the local mock database the API reads and writes. It is
   git-ignored because it changes as each person tests the app. On server
   start, any missing table is copied from `server/seed/`; existing data is
@@ -64,9 +65,9 @@ src/
   auth/                # Demo sign-in session helpers
   calendar/            # Shared event parsing, recurrence and state
   components/          # Shared UI components (Sidebar, ...)
-  hooks/               # API-backed state (favourites, services, lectures)
+  hooks/               # API-backed state (favourites, services, lectures, timesheets)
   models/              # Shared types and helpers
-  pages/               # Route pages (Home, Calendar, QuickLinks, Lectures, Profile, SignIn)
+  pages/               # Route pages (Home, Calendar, QuickLinks, Lectures, Timesheets, Profile, SignIn)
 ```
 
 The service catalogue contains only the fields used by the shared, currently
@@ -78,6 +79,8 @@ Routing is handled by [react-router-dom](https://reactrouter.com/). Add new page
 The workspace sidebar links to Home (`/home`), Calendar (`/calendar`), and
 Quick links (`/quick-links`). The root URL redirects to Home. The profile card
 opens `/profile`, and Help & support opens UNSW student support in a new tab.
+Teaching staff also see a Teaching section. Users who are both a tutor and a
+professor see "Teaching - Tutor" first, followed by "Teaching - Professor".
 
 ### User data
 
@@ -104,13 +107,13 @@ in this workspace.
 The `/sign-in` page requires a test zID and zPass. Every sample user's zPass is
 `Password` (case-sensitive), stored with their record in the mock database:
 
-| User | zID |
-| --- | --- |
-| Kevin | z2460811 |
-| Alex | z2460812 |
-| Jordan | z2460813 |
-| Sam | z2460814 |
-| Taylor | z2460815 |
+| User | zID | Type |
+| --- | --- | --- |
+| Kevin | z2460811 | Student |
+| Alex | z2460812 | Tutor |
+| Jordan | z2460813 | Professor |
+| Sam | z2460814 | Tutor, Professor |
+| Taylor | z2460815 | Tutor, Student |
 
 Portal routes require sign-in. The mock API checks the zID and zPass and never
 returns the password. The signed-in user's ID is stored in browser session
@@ -171,6 +174,18 @@ lectures per week for each professor course between 26 October and 20 November
 Each lecture has a preparation checklist: no items is Not planned, unchecked
 items is Planned, some checked is In progress and all checked is Ready.
 Checklists and each professor's teaching note are saved in the mock database.
+
+### Timesheets
+
+Tutors see a Timesheets page under Teaching in the sidebar for recording and
+submitting teaching hours. Hours are grouped into fortnightly reporting periods
+configured in [server/seed/timesheetSettings.json](server/seed/timesheetSettings.json);
+the current and previous periods are open and older periods are read-only.
+In the **Record hours** form, a tutor can submit an entry for approval
+directly or save it as a draft. Drafts can be opened with the pen button in
+Your entries to edit, delete or submit them; submitted entries are read-only.
+The API rejects future dates, closed periods, courses the tutor does
+not teach and overlapping times. **Export CSV** downloads the selected period.
 
 ### Calendar
 

@@ -1,0 +1,138 @@
+{
+  "alex": [
+    {
+      "id": "alex-1",
+      "courseCode": "COMP1511",
+      "date": "2026-10-19",
+      "activity": "Preparation",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "notes": "Week 6 tutorial materials",
+      "status": "draft"
+    },
+    {
+      "id": "alex-2",
+      "courseCode": "COMP1511",
+      "date": "2026-10-16",
+      "activity": "Tutorial",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "notes": "Group T11 · Lab C104",
+      "status": "submitted"
+    },
+    {
+      "id": "alex-3",
+      "courseCode": "COMP1511",
+      "date": "2026-10-16",
+      "activity": "Consultation",
+      "startTime": "11:00",
+      "endTime": "12:00",
+      "notes": "Student drop-in session",
+      "status": "submitted"
+    },
+    {
+      "id": "alex-4",
+      "courseCode": "COMP1511",
+      "date": "2026-10-14",
+      "activity": "Marking",
+      "startTime": "13:00",
+      "endTime": "15:00",
+      "notes": "Lab exercise feedback",
+      "status": "approved"
+    },
+    {
+      "id": "alex-5",
+      "courseCode": "COMP1511",
+      "date": "2026-10-13",
+      "activity": "Tutorial",
+      "startTime": "09:00",
+      "endTime": "13:00",
+      "notes": "Groups T09 & T10",
+      "status": "approved"
+    },
+    {
+      "id": "alex-6",
+      "courseCode": "COMP1511",
+      "date": "2026-10-12",
+      "activity": "Preparation",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "notes": "Week 5 tutorial materials",
+      "status": "approved"
+    },
+    {
+      "id": "alex-7",
+      "courseCode": "COMP1511",
+      "date": "2026-10-06",
+      "activity": "Tutorial",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "notes": "Group T11 · Lab C104",
+      "status": "approved"
+    },
+    {
+      "id": "alex-8",
+      "courseCode": "COMP1511",
+      "date": "2026-10-02",
+      "activity": "Marking",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "notes": "Lab exercise feedback",
+      "status": "approved"
+    },
+    {
+      "id": "alex-9",
+      "courseCode": "COMP1511",
+      "date": "2026-09-30",
+      "activity": "Preparation",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "notes": "Week 4 tutorial materials",
+      "status": "approved"
+    }
+  ],
+  "sam": [
+    {
+      "id": "sam-1",
+      "courseCode": "COMP1511",
+      "date": "2026-10-17",
+      "activity": "Marking",
+      "startTime": "10:00",
+      "endTime": "11:30",
+      "notes": "Assignment 1 marking",
+      "status": "draft"
+    },
+    {
+      "id": "sam-2",
+      "courseCode": "COMP1511",
+      "date": "2026-10-15",
+      "activity": "Tutorial",
+      "startTime": "15:00",
+      "endTime": "17:00",
+      "notes": "Group H15",
+      "status": "submitted"
+    }
+  ],
+  "taylor": [
+    {
+      "id": "taylor-1",
+      "courseCode": "COMP1511",
+      "date": "2026-10-18",
+      "activity": "Preparation",
+      "startTime": "19:00",
+      "endTime": "20:00",
+      "notes": "Week 6 lab walkthrough",
+      "status": "draft"
+    },
+    {
+      "id": "taylor-2",
+      "courseCode": "COMP1511",
+      "date": "2026-10-14",
+      "activity": "Tutorial",
+      "startTime": "12:00",
+      "endTime": "14:00",
+      "notes": "Group W12",
+      "status": "approved"
+    }
+  ]
+}
