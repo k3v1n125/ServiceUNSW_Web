@@ -1,4 +1,4 @@
-import type { QuickLinkService } from '../data/services'
+import type { QuickLinkService } from '../models/services'
 import ServiceIcon from './ServiceIcon'
 import './ServiceCard.css'
 

@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode, SubmitEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { calendarCategoryLabels } from '../data/calendar'
-import type { CalendarCategory, CalendarEvent } from '../data/calendar'
+import { calendarCategoryLabels } from '../models/calendar'
+import type { CalendarCategory, CalendarEvent } from '../models/calendar'
 import { dateKey, getDayOccurrences } from '../calendar/events'
 import type { CalendarData } from '../calendar/useCalendarData'
 import { getEventDetailsPosition } from '../calendar/eventDetailsPosition'
@@ -155,21 +155,22 @@ function hashString(value: string): number {
 function getCourseColor(event: CalendarEvent) {
   if (event.category === 'deadline') return { background: '#eee8f8', color: '#70449a' }
   if (event.category === 'campus') return { background: '#e4f2eb', color: '#28775e' }
+  if (event.category === 'lecture') return { background: '#fdeee2', color: '#a4521b' }
   const index = hashString(extractCourseCode(event.summary)) % COURSE_COLOR_PALETTE.length
   return COURSE_COLOR_PALETTE[index]
 }
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const FILTER_CATEGORIES: CalendarCategory[] = ['timetable', 'deadline', 'campus']
+const FILTER_CATEGORIES: CalendarCategory[] = ['timetable', 'lecture', 'deadline', 'campus']
 
 function Calendar({ calendar }: { calendar: CalendarData }) {
   const {
-    today, events, icsUrl, loading, error, personalEventsError, personalEventsReady, saveIcsUrl, addPersonalEvent,
+    today, events, icsUrl, loading, error, personalEventsError, personalEventsReady, serverEventsError, saveIcsUrl, addPersonalEvent,
   } = calendar
   const [inputValue, setInputValue] = useState(icsUrl)
   const [saving, setSaving] = useState(false)
   const [filters, setFilters] = useState<Record<CalendarCategory, boolean>>({
-    timetable: true, deadline: true, campus: true, personal: true,
+    timetable: true, lecture: true, deadline: true, campus: true, personal: true,
   })
   const [selectedDay, setSelectedDay] = useState(today)
   const [dialog, setDialog] = useState<'settings' | 'add' | null>(null)
@@ -182,6 +183,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
     null,
   )
 
+  const hasLectures = events.some((event) => event.category === 'lecture')
   const visibleEvents = useMemo(
     () => events.filter((event) => filters[event.category]),
     [events, filters],
@@ -298,7 +300,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
       </header>
       <div className="calendar-toolbar">
         <div className="calendar-filters">
-          {FILTER_CATEGORIES.map((category) => (
+          {FILTER_CATEGORIES.filter((category) => category !== 'lecture' || hasLectures).map((category) => (
             <button key={category} type="button" className="calendar-secondary" aria-pressed={filters[category]}
               onClick={() => setFilters((previous) => ({ ...previous, [category]: !previous[category] }))}>
               <span aria-hidden="true">{filters[category] ? '✓' : '+'}</span> {calendarCategoryLabels[category]}
@@ -310,6 +312,7 @@ function Calendar({ calendar }: { calendar: CalendarData }) {
 
       {loading && <p className="calendar-status">Loading events…</p>}
       {error && <p role="alert" className="calendar-status calendar-error">{error}</p>}
+      {serverEventsError && <p role="alert" className="calendar-status calendar-error">{serverEventsError}</p>}
       {personalEventsError && <p role="alert" className="calendar-status calendar-error">{personalEventsError}</p>}
 
       <div className="calendar-layout">

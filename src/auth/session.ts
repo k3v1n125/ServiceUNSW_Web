@@ -1,22 +1,14 @@
-import { users } from '../data/users'
-import type { User } from '../data/users'
+import type { User } from '../models/users'
 
-const sessionKey = 'serviceunsw-demo-zid'
+const sessionKey = 'serviceunsw-demo-user-id'
 
-export function authenticate(zid: string, zPass: string): User | undefined {
-  return users.find((user) =>
-    user.universityId === zid.trim().toLowerCase() && user.zPass === zPass,
-  )
-}
-
-export function readSession(): User | null {
+export function readSessionUserId(): string | null {
   if (typeof window === 'undefined') return null
-  const zid = window.sessionStorage.getItem(sessionKey)
-  return users.find((user) => user.universityId === zid) ?? null
+  return window.sessionStorage.getItem(sessionKey)
 }
 
 export function saveSession(user: User): void {
-  window.sessionStorage.setItem(sessionKey, user.universityId)
+  window.sessionStorage.setItem(sessionKey, user.id)
 }
 
 export function clearSession(): void {

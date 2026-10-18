@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import myunswLogo from '../assets/myunsw.png'
-import { getUserInitials } from '../data/users'
-import type { User } from '../data/users'
+import { getUserInitials, roleLabels } from '../models/users'
+import type { User } from '../models/users'
 import RoleBadges from './RoleBadges'
 import './Sidebar.css'
 
@@ -53,19 +53,35 @@ const navigation = [
   },
 ]
 
+const teachingNavigationByRole: { role: 'tutor' | 'professor', items: typeof navigation }[] = [
+  {
+    role: 'professor',
+    items: [{
+      to: '/lectures',
+      label: 'Lectures',
+      icon: (
+        <>
+          <path d="M3 5h18v12H3z" />
+          <path d="m8 21 4-4 4 4M8 9h8m-8 4h5" />
+        </>
+      ),
+    }],
+  },
+  {
+    role: 'tutor',
+    items: [],
+  },
+]
+
 function Sidebar({ user }: { user: User }) {
-  const teachingNavigation = user.roles.includes('professor')
-    ? [{
-        to: '/lectures',
-        label: 'Lectures',
-        icon: (
-          <>
-            <path d="M3 5h18v12H3z" />
-            <path d="m8 21 4-4 4 4M8 9h8m-8 4h5" />
-          </>
-        ),
-      }]
-    : []
+  const isProfessorAndTutor = user.roles.includes('professor') && user.roles.includes('tutor')
+  const teachingSections = teachingNavigationByRole
+    .filter(({ role, items }) => user.roles.includes(role) && items.length > 0)
+    .map(({ role, items }) => ({
+      role,
+      heading: isProfessorAndTutor ? `Teaching - ${roleLabels[role]}` : 'Teaching',
+      items,
+    }))
 
   return (
     <aside className="sidebar">
@@ -90,11 +106,11 @@ function Sidebar({ user }: { user: User }) {
             </li>
           ))}
         </ul>
-        {teachingNavigation.length > 0 && (
-          <>
-            <p className="sidebar-section-label sidebar-teaching-label">Teaching</p>
+        {teachingSections.map(({ role, heading, items }) => (
+          <div key={role}>
+            <p className="sidebar-section-label sidebar-teaching-label">{heading}</p>
             <ul className="sidebar-nav">
-              {teachingNavigation.map(({ to, label, icon }) => (
+              {items.map(({ to, label, icon }) => (
                 <li key={to}>
                   <NavLink to={to} end className={({ isActive }) => (isActive ? 'active' : '')}>
                     <SidebarIcon>{icon}</SidebarIcon>
@@ -103,8 +119,8 @@ function Sidebar({ user }: { user: User }) {
                 </li>
               ))}
             </ul>
-          </>
-        )}
+          </div>
+        ))}
       </nav>
 
       <div className="sidebar-footer">

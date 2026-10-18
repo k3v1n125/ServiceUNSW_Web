@@ -1,28 +1,23 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
 import { Link } from 'react-router-dom'
-import type { User } from '../data/users'
-import {
-  getLectureKey,
-  getLectureSessions,
-  getLectureStatus,
-  getProfessorCourses,
-} from '../data/lectures'
-import type { LectureChecklistItem } from '../data/lectures'
+import type { User } from '../models/users'
+import { getLectureKey, getLectureStatus } from '../models/lectures'
+import type { LectureChecklistItem } from '../models/lectures'
 import { useLectureChecklists } from '../hooks/useLectureChecklists'
+import { useLecturePlan } from '../hooks/useLecturePlan'
 import TeachingNote from '../components/TeachingNote'
 import './Lectures.css'
 
 function Lectures({ user }: { user: User }) {
-  const courses = getProfessorCourses(user)
-  const sessions = getLectureSessions()
+  const plan = useLecturePlan(user.id)
+  const { courses, sessions } = plan
   const checklistsState = useLectureChecklists(user.id)
   const [newItems, setNewItems] = useState<Record<string, string>>({})
-  const [selectedLectureKey, setSelectedLectureKey] = useState(() =>
-    courses.length > 0 && sessions.length > 0
-      ? getLectureKey(courses[0].courseCode, sessions[0].date)
-      : '',
-  )
+  const [chosenLectureKey, setSelectedLectureKey] = useState('')
+  const selectedLectureKey = chosenLectureKey || (courses.length > 0 && sessions.length > 0
+    ? getLectureKey(courses[0].courseCode, sessions[0].date)
+    : '')
   const selectedLecture = courses.flatMap((course) =>
     sessions.map((session) => ({
       course,
@@ -80,18 +75,30 @@ function Lectures({ user }: { user: User }) {
       </header>
 
       <section className="lectures-overview" aria-label="Lecture plan overview">
-        <article className="lectures-stat">
-          <span>Upcoming in this view</span>
+        <article className="lectures-stat lectures-upcoming-stat">
+          <div className="lectures-stat-heading">
+            <span>Upcoming in this view</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+              <path d="M8 3v4m8-4v4M3.5 10h17M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01M16 17.5h.01" />
+            </svg>
+          </div>
           <strong>{sessions.length * courses.length} lectures</strong>
           <small>26 October – 20 November 2026</small>
         </article>
-        <article className="lectures-stat">
-          <span>Teaching courses</span>
+        <article className="lectures-stat lectures-courses-stat">
+          <div className="lectures-stat-heading">
+            <span>Teaching courses</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 7c-1.8-1.6-4.6-2.3-8.5-2v13c3.9-.3 6.7.4 8.5 2 1.8-1.6 4.6-2.3 8.5-2V5c-3.9-.3-6.7.4-8.5 2Z" />
+              <path d="M12 7v13" />
+            </svg>
+          </div>
           <strong>{courses.length} {courses.length === 1 ? 'course' : 'courses'}</strong>
           <small>{courses.map((course) => course.courseCode).join(' · ') || 'No courses assigned'}</small>
         </article>
         <article className="lectures-stat lectures-ready-stat">
-          <div className="lectures-ready-heading">
+          <div className="lectures-stat-heading">
             <span>Ready to deliver</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="9" />
@@ -111,7 +118,11 @@ function Lectures({ user }: { user: User }) {
               <p>Two sessions each week, from 26 October to 20 November.</p>
             </div>
           </div>
-          {courses.length === 0 ? (
+          {plan.loading ? (
+            <p className="lectures-empty" role="status">Loading your lecture plan…</p>
+          ) : plan.error ? (
+            <p className="lecture-checklist-error" role="alert">{plan.error}</p>
+          ) : courses.length === 0 ? (
             <p className="lectures-empty">No professor courses are assigned to your account yet.</p>
           ) : (
             courses.flatMap((course) =>
@@ -227,7 +238,7 @@ function Lectures({ user }: { user: User }) {
                 {checklistsState.error && <p className="lecture-checklist-error" role="alert">{checklistsState.error}</p>}
               </>
             ) : (
-              <p className="lectures-empty">Assign a professor course to see upcoming lecture details.</p>
+              <p className="lectures-empty">{plan.loading ? 'Loading lecture details…' : 'Assign a professor course to see upcoming lecture details.'}</p>
             )}
           </section>
           <TeachingNote key={user.id} userId={user.id} />

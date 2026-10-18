@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { mockApiPlugin } from './server/mockApi.ts'
 
-const mockDatabaseDirectory = fileURLToPath(new URL('./src/data', import.meta.url))
+const mockDatabase = {
+  seedDirectory: fileURLToPath(new URL('./server/seed', import.meta.url)),
+  dataDirectory: fileURLToPath(new URL('./.mockdb', import.meta.url)),
+}
 
 // Fetches remote .ics calendars server-side so the browser never has to make
 // a cross-origin request (which calendar providers typically block via CORS).
@@ -56,10 +59,10 @@ function icsProxyPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), icsProxyPlugin(), mockApiPlugin(mockDatabaseDirectory)],
+  plugins: [react(), icsProxyPlugin(), mockApiPlugin(mockDatabase)],
   server: {
     watch: {
-      ignored: ['**/src/data/*.json'],
+      ignored: ['**/.mockdb/**'],
     },
   },
 })

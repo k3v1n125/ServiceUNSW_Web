@@ -28,3 +28,8 @@
     margin-top: 0;
   }
 }
+
+.app-loading {
+  padding: 2rem;
+  color: #777c70;
+}

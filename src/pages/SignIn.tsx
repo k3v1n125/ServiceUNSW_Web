@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { authenticate } from '../auth/session'
-import type { User } from '../data/users'
+import { ApiError, signIn } from '../api/mockDatabase'
+import type { User } from '../models/users'
 import myunswLogo from '../assets/myunsw.png'
 import './SignIn.css'
 
@@ -13,12 +13,22 @@ function SignIn({ onSignIn, sessionError }: {
   const [zPass, setZPass] = useState('')
   const [error, setError] = useState('')
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    const user = authenticate(zid, zPass)
-    if (!user) {
-      setError('Incorrect zID or zPass. Please try again.')
+    setError('')
+    setSubmitting(true)
+    let user: User
+    try {
+      user = await signIn(zid, zPass)
+    } catch (signInError) {
+      console.error('Unable to sign in:', signInError)
+      setError(signInError instanceof ApiError && signInError.status === 401
+        ? 'Incorrect zID or zPass. Please try again.'
+        : 'Unable to reach the sign-in service. Please try again.')
       setZPass('')
+      setSubmitting(false)
       return
     }
     try {
@@ -27,6 +37,7 @@ function SignIn({ onSignIn, sessionError }: {
       console.error('Unable to save demo session:', storageError)
       setError('Unable to start your session. Please allow browser session storage and try again.')
       setZPass('')
+      setSubmitting(false)
     }
   }
 
@@ -68,7 +79,7 @@ function SignIn({ onSignIn, sessionError }: {
             aria-invalid={!!error}
           />
           {(error || sessionError) && <p id="sign-in-error" className="sign-in-error" role="alert">{error || sessionError}</p>}
-          <button type="submit">Sign in</button>
+          <button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
         </form>
         <p className="sign-in-demo">
           Demo only. Use a test zID from z2460811 to z2460815 with zPass <strong>Password</strong>.

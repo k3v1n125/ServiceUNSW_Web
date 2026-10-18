@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { readUserRecord, writeUserRecord } from '../api/mockDatabase'
-import { parseFavourites, validateFavourites } from '../data/favourites'
+import { parseFavourites } from '../models/favourites'
 
 export function useFavourites(userId: string) {
   const [state, setState] = useState<{ ids: string[]; loading: boolean; saving: boolean; error: string }>({
@@ -33,7 +33,7 @@ export function useFavourites(userId: string) {
   async function save(ids: string[]): Promise<boolean> {
     setState((previous) => ({ ...previous, saving: true, error: '' }))
     try {
-      const saved = validateFavourites(await writeUserRecord(userId, 'favourites', validateFavourites(ids)))
+      const saved = parseFavourites(await writeUserRecord(userId, 'favourites', parseFavourites(ids)))
       setState({ ids: [...saved], loading: false, saving: false, error: '' })
       return true
     } catch (error) {

@@ -73,7 +73,12 @@
   cursor: pointer;
 }
 
-.sign-in-card button:hover {
+.sign-in-card button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.sign-in-card button:hover:not(:disabled) {
   background: #f4d91c;
 }
 

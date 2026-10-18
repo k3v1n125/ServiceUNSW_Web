@@ -1,5 +1,5 @@
-import { roleLabels } from '../data/users'
-import type { UserRole } from '../data/users'
+import { roleLabels } from '../models/users'
+import type { UserRole } from '../models/users'
 import './RoleBadges.css'
 
 function RoleBadges({ roles }: { roles: UserRole[] }) {

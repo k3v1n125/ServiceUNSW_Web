@@ -1,4 +1,4 @@
-import type { ServiceIcon as IconName, ServiceTone } from '../data/services'
+import type { ServiceIcon as IconName, ServiceTone } from '../models/services'
 import './ServiceIcon.css'
 
 const paths: Record<IconName, string> = {

@@ -83,19 +83,34 @@
   font-size: 0.75rem;
 }
 
-.lectures-ready-heading {
+.lectures-stat-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.lectures-ready-heading svg {
+.lectures-stat-heading svg {
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
-  stroke: #28775e;
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.lectures-upcoming-stat .lectures-stat-heading svg {
+  stroke: #2d2f2a;
+}
+
+.lectures-courses-stat .lectures-stat-heading svg,
+.lectures-courses-stat small {
+  stroke: #2f5ea8;
+  color: #2f5ea8;
+}
+
+.lectures-ready-stat .lectures-stat-heading svg {
+  stroke: #28775e;
 }
 
 .lectures-ready-stat strong {

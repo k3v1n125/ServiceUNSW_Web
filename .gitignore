@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local mock database (seeded from server/seed on dev/preview start)
+.mockdb

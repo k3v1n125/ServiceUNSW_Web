@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import RoleBadges from '../components/RoleBadges'
-import { getUserInitials, getUserTitle, roleLabels } from '../data/users'
-import type { User, UserRole } from '../data/users'
+import { getUserInitials, getUserTitle, roleLabels } from '../models/users'
+import type { User, UserRole } from '../models/users'
 import './Profile.css'
 
 const roleAccess: Record<UserRole, { title: string; description: string }> = {

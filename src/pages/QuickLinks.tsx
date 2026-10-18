@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ServiceIcon from '../components/ServiceIcon'
 import ServiceCard from '../components/ServiceCard'
-import { MAX_FAVOURITES } from '../data/favourites'
-import { getServicesForUser, quickLinkServices, serviceGroups } from '../data/services'
-import type { User } from '../data/users'
+import { MAX_FAVOURITES } from '../models/favourites'
 import type { FavouritesState } from '../hooks/useFavourites'
+import type { ServicesState } from '../hooks/useServices'
+import type { QuickLinkService } from '../models/services'
 import './QuickLinks.css'
 
-function FavouriteManager({ favourites, onClose }: { favourites: FavouritesState; onClose: () => void }) {
+function FavouriteManager({ favourites, services, onClose }: {
+  favourites: FavouritesState
+  services: QuickLinkService[]
+  onClose: () => void
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [draft, setDraft] = useState([...favourites.ids])
   useEffect(() => { dialog.current?.showModal() }, [])
@@ -22,7 +26,7 @@ function FavouriteManager({ favourites, onClose }: { favourites: FavouritesState
       <p id="favourites-hint">Choose up to {MAX_FAVOURITES} services to show on Home. Deselect one to choose another.</p>
       <p className="favourites-count" role="status">{draft.length} / {MAX_FAVOURITES} selected</p>
       <div className="favourites-options">
-        {quickLinkServices.map((service) => {
+        {services.map((service) => {
           const selected = draft.includes(service.id)
           return (
             <label key={service.id}>
@@ -48,12 +52,12 @@ function FavouriteManager({ favourites, onClose }: { favourites: FavouritesState
   )
 }
 
-function QuickLinks({ favourites, user }: { favourites: FavouritesState; user: User }) {
+function QuickLinks({ favourites, catalogue }: { favourites: FavouritesState; catalogue: ServicesState }) {
   const [search, setSearch] = useState('')
   const [favouritesOnly, setFavouritesOnly] = useState(false)
   const [managing, setManaging] = useState(false)
   const query = search.trim().toLowerCase()
-  const services = getServicesForUser(user).filter((service) =>
+  const services = catalogue.services.filter((service) =>
     (!favouritesOnly || favourites.ids.includes(service.id)) &&
     `${service.name} ${service.description}`.toLowerCase().includes(query),
   )
@@ -68,7 +72,7 @@ function QuickLinks({ favourites, user }: { favourites: FavouritesState; user: U
           <h1>A shortcut to what you need</h1>
           <p>Your university services, all in one place. Choose favourites to keep them on Home.</p>
         </div>
-        <button type="button" className="quick-button" disabled={favourites.loading} onClick={() => setManaging(true)}>☆ Manage favourites</button>
+        <button type="button" className="quick-button" disabled={favourites.loading || catalogue.loading || !!catalogue.error} onClick={() => setManaging(true)}>☆ Manage favourites</button>
       </header>
       <div className="quick-toolbar">
         <input type="search" aria-label="Search university services" placeholder="Search university services"
@@ -80,8 +84,10 @@ function QuickLinks({ favourites, user }: { favourites: FavouritesState; user: U
         <span className="quick-service-count" role="status">{services.length} {services.length === 1 ? 'service' : 'services'}</span>
       </div>
       {favourites.error && !managing && <p className="quick-error" role="alert">{favourites.error}</p>}
-      {services.length === 0 && <p className="quick-empty">No services found. Change your search or manage your favourites.</p>}
-      {serviceGroups.map((group) => {
+      {catalogue.loading && <p className="quick-empty" role="status">Loading services…</p>}
+      {catalogue.error && <p className="quick-error" role="alert">{catalogue.error}</p>}
+      {!catalogue.loading && !catalogue.error && services.length === 0 && <p className="quick-empty">No services found. Change your search or manage your favourites.</p>}
+      {catalogue.groups.map((group) => {
         const entries = services.filter((service) => service.group === group.id)
         if (entries.length === 0) return null
         return (
@@ -96,7 +102,7 @@ function QuickLinks({ favourites, user }: { favourites: FavouritesState; user: U
           </section>
         )
       })}
-      {managing && <FavouriteManager favourites={favourites} onClose={() => setManaging(false)} />}
+      {managing && <FavouriteManager favourites={favourites} services={catalogue.services} onClose={() => setManaging(false)} />}
     </div>
   )
 }

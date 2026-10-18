@@ -1,26 +1,32 @@
 import { Link } from 'react-router-dom'
-import { calendarCategoryLabels } from '../data/calendar'
-import type { CalendarCategory } from '../data/calendar'
+import { calendarCategoryLabels } from '../models/calendar'
+import type { CalendarCategory } from '../models/calendar'
 import { getDayOccurrences } from '../calendar/events'
 import type { CalendarData } from '../calendar/useCalendarData'
-import type { User } from '../data/users'
-import { getServicesForUser } from '../data/services'
+import type { User } from '../models/users'
 import type { FavouritesState } from '../hooks/useFavourites'
+import type { ServicesState } from '../hooks/useServices'
 import ServiceCard from '../components/ServiceCard'
 import './Home.css'
 
 const categoryTones: Record<CalendarCategory, string> = {
-  timetable: 'blue', deadline: 'purple', campus: 'green', personal: 'yellow',
+  timetable: 'blue', lecture: 'orange', deadline: 'purple', campus: 'green', personal: 'yellow',
 }
 
-function Home({ user, calendar, favourites }: { user: User; calendar: CalendarData; favourites: FavouritesState }) {
+function Home({ user, calendar, favourites, catalogue }: {
+  user: User
+  calendar: CalendarData
+  favourites: FavouritesState
+  catalogue: ServicesState
+}) {
   const { today, events, loading, error } = calendar
   const todayEvents = getDayOccurrences(events, today)
   const nextDeadline = events.find((event) => event.category === 'deadline')
   const campusEvent = events.find((event) => event.category === 'campus' && event.start >= today)
   const greeting = today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'
-  const services = getServicesForUser(user)
-  const favouriteServices = favourites.ids.flatMap((id) => services.filter((service) => service.id === id))
+  const favouriteServices = favourites.ids.flatMap((id) => catalogue.services.filter((service) => service.id === id))
+  const favouritesLoading = favourites.loading || catalogue.loading
+  const favouritesError = favourites.error || catalogue.error
 
   return (
     <div className="home-page">
@@ -85,9 +91,9 @@ function Home({ user, calendar, favourites }: { user: User; calendar: CalendarDa
               <ServiceCard service={service} favourite key={service.id} />
             ))}
           </div>
-          {favourites.loading && <p className="home-muted" role="status">Loading favourites…</p>}
-          {favourites.error && <p className="home-schedule-error" role="alert">{favourites.error}</p>}
-          {!favourites.loading && !favourites.error && favouriteServices.length === 0 && <p className="home-muted">No favourites yet. Choose up to four in <Link to="/quick-links">Quick links</Link>.</p>}
+          {favouritesLoading && <p className="home-muted" role="status">Loading favourites…</p>}
+          {favouritesError && <p className="home-schedule-error" role="alert">{favouritesError}</p>}
+          {!favouritesLoading && !favouritesError && favouriteServices.length === 0 && <p className="home-muted">No favourites yet. Choose up to four in <Link to="/quick-links">Quick links</Link>.</p>}
         </section>
       </div>
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { after, before, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -18,7 +19,7 @@ before(async () => {
   ;({ parseIcs, getDayOccurrences } = await server.ssrLoadModule('/src/calendar/events.ts'))
   ;({ default: Home } = await server.ssrLoadModule('/src/pages/Home.tsx'))
   ;({ default: Calendar } = await server.ssrLoadModule('/src/pages/Calendar.tsx'))
-  ;({ users } = await server.ssrLoadModule('/src/data/users.ts'))
+  users = Object.values(JSON.parse(await readFile(new URL('../server/seed/users.json', import.meta.url), 'utf8')))
   ;({ getEventDetailsPosition } = await server.ssrLoadModule('/src/calendar/eventDetailsPosition.ts'))
 })
 
@@ -59,7 +60,8 @@ function event(uid, category, hour) {
 function data(events, overrides = {}) {
   return {
     today, events, icsUrl: 'https://example.com/timetable.ics',
-    loading: false, error: null, saveIcsUrl() {}, addPersonalEvent() {},
+    loading: false, error: null, personalEventsError: null, personalEventsReady: true,
+    serverEventsError: null, async saveIcsUrl() {}, async addPersonalEvent() {},
     ...overrides,
   }
 }
@@ -68,7 +70,8 @@ function render(component) {
   return renderToStaticMarkup(createElement(MemoryRouter, null, component))
 }
 
-const favourites = { ids: ['moodle', 'myunsw', 'library', 'email'], error: '', save() { return true } }
+const favourites = { ids: ['moodle', 'myunsw', 'library', 'email'], loading: false, saving: false, error: '', async save() { return true } }
+const catalogue = { groups: [], services: [], loading: false, error: '' }
 
 test('today includes all categories, recurring classes, all-day and overlapping events', () => {
   const events = [
@@ -94,7 +97,7 @@ test('home and calendar render the same shared events without marking real event
   ]
   const calendar = data(events)
   for (const user of users) {
-    const markup = render(createElement(Home, { user, calendar, favourites }))
+    const markup = render(createElement(Home, { user, calendar, favourites, catalogue }))
     assert.ok(markup.includes('6 events today'))
     assert.ok(!markup.includes('View calendar'))
     for (const entry of events) assert.ok(markup.includes(entry.summary))
@@ -115,7 +118,7 @@ test('home and calendar render the same shared events without marking real event
 })
 
 test('home shows loading, errors and empty schedules explicitly', () => {
-  const props = { user: users[0], favourites }
+  const props = { user: users[0], favourites, catalogue }
   assert.ok(render(createElement(Home, { ...props, calendar: data([]) })).includes('No events scheduled for today'))
   assert.ok(render(createElement(Home, { ...props, calendar: data([], { loading: true }) })).includes('Loading timetable events'))
   const markup = render(createElement(Home, { ...props, calendar: data([], { error: 'Failed to load calendar (502)' }) }))

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { readUserRecord, writeUserRecord } from '../api/mockDatabase'
-import { createDemoEvents } from '../data/calendar'
-import type { CalendarEvent } from '../data/calendar'
+import { fetchCalendarEvents, readUserRecord, writeUserRecord } from '../api/mockDatabase'
+import type { CalendarEvent } from '../models/calendar'
 import { parseIcs } from './events'
 
 interface StoredPersonalEvent {
@@ -71,7 +70,8 @@ export function useCalendarData(userId: string) {
   const [personalEventsError, setPersonalEventsError] = useState<string | null>(null)
   const [personalEventsReady, setPersonalEventsReady] = useState(false)
   const [today] = useState(() => new Date())
-  const [demoEvents] = useState(() => createDemoEvents(today))
+  const [serverEvents, setServerEvents] = useState<CalendarEvent[]>([])
+  const [serverEventsError, setServerEventsError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -87,6 +87,19 @@ export function useCalendarData(userId: string) {
         if (cancelled) return
         setError('Unable to read saved calendar settings from the mock database.')
         setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [userId])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchCalendarEvents(userId)
+      .then((events) => {
+        if (!cancelled) setServerEvents(events)
+      })
+      .catch((eventsError: unknown) => {
+        console.error('Unable to read calendar events:', eventsError)
+        if (!cancelled) setServerEventsError('Unable to load university and lecture events from the mock API.')
       })
     return () => { cancelled = true }
   }, [userId])
@@ -129,8 +142,8 @@ export function useCalendarData(userId: string) {
   }, [icsUrl, feedRevision])
 
   const events = useMemo(
-    () => [...(icsUrl ? importedEvents : []), ...demoEvents, ...personalEvents],
-    [icsUrl, importedEvents, demoEvents, personalEvents],
+    () => [...(icsUrl ? importedEvents : []), ...serverEvents, ...personalEvents],
+    [icsUrl, importedEvents, serverEvents, personalEvents],
   )
 
   async function saveIcsUrl(url: string) {
@@ -163,6 +176,7 @@ export function useCalendarData(userId: string) {
     error,
     personalEventsError,
     personalEventsReady,
+    serverEventsError,
     saveIcsUrl,
     addPersonalEvent,
   }

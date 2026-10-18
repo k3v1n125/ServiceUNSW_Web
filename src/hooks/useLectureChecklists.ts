@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { readUserRecord, writeUserRecord } from '../api/mockDatabase'
-import { parseLectureChecklists } from '../data/lectures'
-import type { LectureChecklists } from '../data/lectures'
+import { parseLectureChecklists } from '../models/lectures'
+import type { LectureChecklists } from '../models/lectures'
 
 export function useLectureChecklists(userId: string) {
   const [state, setState] = useState<{

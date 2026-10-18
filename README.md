@@ -34,17 +34,39 @@ This prints a local URL (usually `http://localhost:5173`) — open it in your br
 - `npm run preview` — locally preview the production build
 - `npm run lint` — run Oxlint over the codebase
 
+## Mock database
+
+The app never reads data files directly. Pages call a simulated API
+(`/api/auth/sign-in` and `/api/users/:userId/...`) served by
+[server/mockApi.ts](server/mockApi.ts) inside the Vite dev and preview servers.
+
+- `server/seed/` — committed starting data (users, services, lecture schedule,
+  demo calendar events, starting teaching notes and empty user tables).
+- `.mockdb/` — the local mock database the API reads and writes. It is
+  git-ignored because it changes as each person tests the app. On server
+  start, any missing table is copied from `server/seed/`; existing data is
+  never overwritten.
+
+To reset your local data, stop the server and delete `.mockdb/`. To change the
+starting data for everyone, edit `server/seed/`; existing `.mockdb/` folders
+keep their current files until deleted. A static build without the Vite server
+has no API.
+
 ## Project Structure
 
 ```
+server/
+  mockApi.ts           # Simulated API backed by the local mock database
+  seed/                # Committed starting data for the mock database
 src/
   App.tsx              # Route definitions
+  api/                 # Client functions for the simulated API
   auth/                # Demo sign-in session helpers
   calendar/            # Shared event parsing, recurrence and state
   components/          # Shared UI components (Sidebar, ...)
-  data/                # User, calendar, service and favourites data
-  hooks/               # Per-user favourites state
-  pages/               # Route pages (Home, Calendar, QuickLinks, Profile, SignIn)
+  hooks/               # API-backed state (favourites, services, lectures)
+  models/              # Shared types and helpers
+  pages/               # Route pages (Home, Calendar, QuickLinks, Lectures, Profile, SignIn)
 ```
 
 The service catalogue contains only the fields used by the shared, currently
@@ -59,7 +81,7 @@ opens `/profile`, and Help & support opens UNSW student support in a new tab.
 
 ### User data
 
-All user records are stored in [src/data/users.ts](src/data/users.ts). Each user
+User records are seeded from [server/seed/users.json](server/seed/users.json). Each user
 has an ID, a name, and a roles array supporting `student`, `tutor`, and
 `professor`. The five sample users are Kevin (student), Alex (tutor), Jordan
 (professor), Sam (tutor and professor), and Taylor (tutor and student).
@@ -80,7 +102,7 @@ in this workspace.
 ### Demo sign-in
 
 The `/sign-in` page requires a test zID and zPass. Every sample user's zPass is
-`Password` (case-sensitive), stored with their record in `src/data/users.ts`:
+`Password` (case-sensitive), stored with their record in the mock database:
 
 | User | zID |
 | --- | --- |
@@ -90,12 +112,13 @@ The `/sign-in` page requires a test zID and zPass. Every sample user's zPass is
 | Sam | z2460814 |
 | Taylor | z2460815 |
 
-Portal routes require sign-in. The selected user's zID is stored in browser
-session storage so refreshing the tab keeps the session; the entered password
-is never stored there. Sign out on the profile page clears the session and
+Portal routes require sign-in. The mock API checks the zID and zPass and never
+returns the password. The signed-in user's ID is stored in browser session
+storage so refreshing the tab keeps the session; the entered password is never
+stored there. Sign out on the profile page clears the session and
 returns to sign-in. The profile and sidebar update to the selected user's roles.
 
-This is client-side demo authentication only, not a security boundary or a
+This is demo authentication only, not a security boundary or a
 connection to UNSW authentication. Test passwords are public fixtures; never
 enter real credentials. Production authentication requires a trusted backend
 or university identity provider.
@@ -131,33 +154,43 @@ selection dialog. Choose zero to four services and save to update Home.
 Cancel leaves the saved selection unchanged. At four selections, deselect a
 service before choosing another.
 
-Favourites are stored in this browser separately for each signed-in user and
-survive refreshes and sign-out. New users default to Moodle, myUNSW, Library
+Favourites are saved in the mock database separately for each signed-in user
+and survive refreshes and sign-out. New users default to Moodle, myUNSW, Library
 and Student email. Service cards on both Home and Quick links
 share the same appearance, link behaviour and favourite marker. Storage errors
-are displayed explicitly. The shared catalogue is in `src/data/services.ts`.
+are displayed explicitly. The shared catalogue is seeded from `server/seed/services.json`.
 MyPlan replaces Fees & payments and describes the signed-in student's degree
 pathway on both pages. Users without a student degree see a generic description.
 Existing Fees & payments favourites are migrated to MyPlan.
+
+### Lectures
+
+Professors see a Lectures page under Teaching in the sidebar. It lists two
+lectures per week for each professor course between 26 October and 20 November
+2026, based on [server/seed/lectureSchedule.json](server/seed/lectureSchedule.json).
+Each lecture has a preparation checklist: no items is Not planned, unchecked
+items is Planned, some checked is In progress and all checked is Ready.
+Checklists and each professor's teaching note are saved in the mock database.
 
 ### Calendar
 
 The calendar includes month navigation, a Today button, a selected-day agenda
 and a next-deadline card. My timetable, Deadlines and Campus events can each be
-toggled independently. Demo data in [src/data/calendar.ts](src/data/calendar.ts)
+toggled independently. Professors also see their lecture sessions under a
+Lectures filter. Demo data in
+[server/seed/demoCalendarEvents.json](server/seed/demoCalendarEvents.json)
 includes three assignment deadlines and three illustrative DevSoc events,
 dated relative to the day the calendar is opened. These are not actual
 university deadlines or scheduled society events.
 
 Settings beside Add event opens the iCal subscription form. HTTP, HTTPS and
 webcal links are supported; a blank link disconnects the timetable. Settings
-are saved separately for each signed-in user in this browser, and feed errors
-are displayed explicitly. Older browser-wide links are not reused because their
-owner is unknown; reconnect your link once in your own account.
+are saved in the mock database separately for each signed-in user, and feed
+errors are displayed explicitly.
 The existing `/api/ics-proxy` endpoint runs in the Vite development server;
 a production deployment needs an equivalent server-side endpoint.
-Add event creates personal events shared with Home across page navigation.
-They last until you refresh the browser or sign out.
+Add event creates personal events shared with Home. They are saved in the mock
+database for the signed-in user.
 Click a day number to view its agenda or an event to view its details.
 Event details open in an adjacent non-modal card: to the right on Monday
 through Wednesday and to the left on Thursday through Sunday. On small screens

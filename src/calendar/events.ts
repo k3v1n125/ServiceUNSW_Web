@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '../data/calendar'
+import type { CalendarEvent } from '../models/calendar'
 
 function unfoldLines(icsText: string): string[] {
   const lines: string[] = []
