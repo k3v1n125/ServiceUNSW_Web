@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar'
 import Calendar from './pages/Calendar'
 import Home from './pages/Home'
 import Lectures from './pages/Lectures'
+import Castle from './pages/Castle'
 import Timesheets from './pages/Timesheets'
 import Profile from './pages/Profile'
 import QuickLinks from './pages/QuickLinks'
@@ -101,6 +102,10 @@ function Portal({ user, onSignOut }: { user: User; onSignOut: () => void }) {
           <Route
             path="/timesheets"
             element={user.roles.includes('tutor') ? <Timesheets user={user} /> : <Navigate to="/home" replace />}
+          />
+          <Route
+            path="/castle"
+            element={user.roles.includes('tutor') ? <Castle user={user} /> : <Navigate to="/home" replace />}
           />
           <Route path="/profile" element={<Profile user={user} onSignOut={onSignOut} />} />
           <Route path="*" element={<Navigate to="/home" replace />} />

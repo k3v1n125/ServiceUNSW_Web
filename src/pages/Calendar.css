@@ -1,6 +1,6 @@
 .calendar {
   color: #292d27;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .app-content:has(.calendar) {
@@ -68,7 +68,7 @@
 
 .calendar-heading h1 {
   margin: 0 0 0.5rem;
-  font-size: 1.9rem;
+  font-size: var(--font-size-page-title);
   line-height: 1.2;
   font-weight: 700;
 }
@@ -76,6 +76,10 @@
 .calendar-heading p,
 .calendar-toolbar .calendar-status {
   margin: 0;
+}
+
+.calendar-heading p {
+  font-size: var(--font-size-page-subtitle);
 }
 
 .calendar-submit,

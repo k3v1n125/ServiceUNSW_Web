@@ -1,6 +1,6 @@
 .home-page {
   color: #292d27;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .app-content:has(.home-page) {
@@ -46,13 +46,14 @@
 
 .home-heading h1 {
   margin: 0 0 0.5rem;
-  font-size: 1.9rem;
+  font-size: var(--font-size-page-title);
   line-height: 1.2;
   font-weight: 700;
 }
 
 .home-heading p {
   margin: 0;
+  font-size: var(--font-size-page-subtitle);
 }
 
 .home-day-banner {
@@ -118,7 +119,7 @@
 }
 
 .home-page h2 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-section-title);
   font-weight: 500;
   margin: 0;
 }

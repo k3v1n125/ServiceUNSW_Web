@@ -1,7 +1,7 @@
 .profile-page {
   width: 100%;
   color: #292d27;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .app-content:has(.profile-page) {
@@ -56,13 +56,14 @@
 
 .profile-heading h1 {
   margin: 0 0 0.4rem;
-  font-size: 1.9rem;
+  font-size: var(--font-size-page-title);
   line-height: 1.2;
   font-weight: 700;
 }
 
 .profile-heading p {
   margin: 0;
+  font-size: var(--font-size-page-subtitle);
 }
 
 .profile-actions {
@@ -208,6 +209,8 @@
 
 .profile-card-heading h2 {
   margin: 0;
+  font-size: var(--font-size-section-title);
+  font-weight: 500;
 }
 
 .profile-card-heading a,

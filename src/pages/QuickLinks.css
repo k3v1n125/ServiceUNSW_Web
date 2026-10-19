@@ -1,6 +1,6 @@
 .quick-links-page {
   color: #292d27;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .app-content:has(.quick-links-page) {
@@ -34,7 +34,7 @@
 }
 
 .quick-heading h1 {
-  font-size: 1.9rem;
+  font-size: var(--font-size-page-title);
   line-height: 1.2;
   font-weight: 700;
   margin: 0 0 0.5rem;
@@ -46,6 +46,10 @@
 .quick-empty {
   color: #777c70;
   margin: 0;
+}
+
+.quick-heading p {
+  font-size: var(--font-size-page-subtitle);
 }
 
 .quick-button {
@@ -102,7 +106,7 @@
 }
 
 .quick-group h2 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-section-title);
   font-weight: 500;
   margin: 0 0 0.3rem;
 }

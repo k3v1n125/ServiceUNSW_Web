@@ -1,6 +1,6 @@
 .lectures-page {
   color: #292d27;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .app-content:has(.lectures-page) {
@@ -42,13 +42,14 @@
 
 .lectures-heading h1 {
   margin: 0 0 0.5rem;
-  font-size: 1.9rem;
+  font-size: var(--font-size-page-title);
   line-height: 1.2;
   font-weight: 700;
 }
 
 .lectures-heading p {
   margin: 0;
+  font-size: var(--font-size-page-subtitle);
 }
 
 .lectures-overview {
@@ -134,7 +135,7 @@
 
 .lectures-page h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-section-title);
   font-weight: 500;
 }
 
@@ -254,7 +255,7 @@
   color: #28775e;
 }
 
-.lecture-checklist ul {
+.lecture-checklist {
   display: grid;
   gap: 0.4rem;
   padding: 0;
@@ -519,7 +520,7 @@
   }
 
   .lectures-heading h1 {
-    font-size: 1.55rem;
+    font-size: var(--font-size-page-title);
   }
 
   .lecture-select {

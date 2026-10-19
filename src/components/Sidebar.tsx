@@ -56,16 +56,28 @@ const navigation = [
 const teachingNavigationByRole: { role: 'tutor' | 'professor', items: typeof navigation }[] = [
   {
     role: 'tutor',
-    items: [{
-      to: '/timesheets',
-      label: 'Timesheets',
-      icon: (
-        <>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </>
-      ),
-    }],
+    items: [
+      {
+        to: '/timesheets',
+        label: 'Timesheets',
+        icon: (
+          <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </>
+        ),
+      },
+      {
+        to: '/castle',
+        label: 'Castle',
+        icon: (
+          <>
+            <path d="M3 20h18M5 20V9h14v11M8 9V5h8v4M9 13v2m6-2v2" />
+            <path d="M3 9h18M12 3v2" />
+          </>
+        ),
+      },
+    ],
   },
   {
     role: 'professor',

@@ -1,6 +1,10 @@
 :root {
   --text: #1f2937;
   --bg: #f8fafc;
+  --font-size-body: 0.875rem;
+  --font-size-page-title: 1.9rem;
+  --font-size-page-subtitle: 0.875rem;
+  --font-size-section-title: 1.1rem;
 
   font: 16px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light;
